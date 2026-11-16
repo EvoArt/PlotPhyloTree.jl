@@ -1,4 +1,11 @@
-# A minimal SVG canvas that tracks the bounding box of what is drawn.
+# A backend-neutral canvas: drawing calls record primitives (paths made of
+# move/line/arc/close segments, rectangles, circles, text, images, groups) and
+# track the bounding box of what is drawn. Each backend (SVG, TikZ, CeTZ,
+# Makie) translates the recorded primitives; all layout happens before that.
+#
+# Coordinates are screen-like: x to the right, y downwards, angles in radians
+# clockwise from +x (text angles in degrees, also clockwise). Lengths are px;
+# backends with physical units read 1 px as 1 bp/pt.
 
 mutable struct BBox
     xmin::Float64
@@ -17,111 +24,156 @@ function grow!(b::BBox, x::Real, y::Real)
 end
 grow!(b::BBox, o::BBox) = isempty_bbox(o) ? b : (grow!(b, o.xmin, o.ymin); grow!(b, o.xmax, o.ymax))
 
+# --- primitives ------------------------------------------------------------------------
+
+"""
+Path segment. `op` is `'M'` (move to `x, y`), `'L'` (line to `x, y`), `'A'`
+(circular arc around `cx, cy` with radius `r` from angle `a1` to `a2`, ending
+at `x, y`) or `'Z'` (close the subpath).
+"""
+struct Seg
+    op::Char
+    x::Float64
+    y::Float64
+    cx::Float64
+    cy::Float64
+    r::Float64
+    a1::Float64
+    a2::Float64
+end
+Seg(op::Char, x, y) = Seg(op, x, y, 0.0, 0.0, 0.0, 0.0, 0.0)
+
+abstract type Prim end
+
+struct PathPrim <: Prim
+    segs::Vector{Seg}
+    fill::RGBA
+    stroke::RGBA
+    linewidth::Float64
+    dash::Any                       # nothing, :solid, :dash, :dot, :dashdot, a string or a vector
+    cap::String                     # "round", "butt", "square"
+    join::String                    # "round", "miter", "bevel"
+    fillrule::Union{Nothing,String}
+    class::String
+end
+
+struct RectPrim <: Prim
+    x::Float64
+    y::Float64
+    w::Float64
+    h::Float64
+    fill::RGBA
+    stroke::RGBA
+    linewidth::Float64
+    rx::Float64
+    class::String
+    gradient::Vector{RGBA}          # left-to-right colour stops (evenly spaced) instead of `fill`
+end
+
+struct CirclePrim <: Prim
+    x::Float64
+    y::Float64
+    r::Float64
+    fill::RGBA
+    stroke::RGBA
+    linewidth::Float64
+end
+
+struct TextPrim <: Prim
+    x::Float64
+    y::Float64
+    text::String
+    fontsize::Float64
+    angle::Float64                  # degrees, clockwise
+    halign::Symbol                  # :left, :center, :right
+    valign::Symbol                  # :center, :baseline, :top, :bottom
+    color::RGBA
+    bold::Bool
+    italic::Bool
+    family::Union{Nothing,String}
+    halo::RGBA
+    halowidth::Float64
+    class::String
+end
+
+struct ImagePrim <: Prim
+    x::Float64
+    y::Float64
+    w::Float64
+    h::Float64
+    src::String                     # URL/data URI, or SVG markup when `svg`
+    svg::Bool
+    opacity::Float64
+end
+
+struct GroupPrim <: Prim
+    class::String
+    children::Vector{Prim}
+end
+
 mutable struct Canvas
-    io::IOBuffer
-    defs::IOBuffer
+    prims::Vector{Prim}
+    stack::Vector{Vector{Prim}}
     bbox::BBox
-    ids::Int
 end
-Canvas() = Canvas(IOBuffer(), IOBuffer(), BBox(), 0)
+Canvas() = (v = Prim[]; Canvas(v, [v], BBox()))
 
-newid!(c::Canvas, prefix="p") = (c.ids += 1; string(prefix, c.ids))
+_push!(c::Canvas, p::Prim) = (push!(last(c.stack), p); p)
 
-# --- number and attribute formatting -------------------------------------------
-
-function _num(io::IO, x::Real)
-    x = Float64(x)
-    isfinite(x) || (x = 0.0)
-    r = round(x; digits=2)
-    if r == round(r)
-        print(io, Int(round(r)))
-    else
-        s = string(r)
-        print(io, s)
+function group(f, c::Canvas, class::AbstractString="")
+    g = GroupPrim(String(class), Prim[])
+    _push!(c, g)
+    push!(c.stack, g.children)
+    try
+        f()
+    finally
+        pop!(c.stack)
     end
+    return g
 end
-_num(x::Real) = sprint(_num, x)
 
-function _esc(io::IO, s::AbstractString)
-    for ch in s
-        ch == '&' ? print(io, "&amp;") : ch == '<' ? print(io, "&lt;") :
-        ch == '>' ? print(io, "&gt;") : ch == '"' ? print(io, "&quot;") : print(io, ch)
-    end
-end
-_esc(s::AbstractString) = sprint(_esc, s)
-
-_attr(io::IO, name, x::Real) = (print(io, ' ', name, "=\""); _num(io, x); print(io, '"'))
-_attr(io::IO, name, s::AbstractString) = (print(io, ' ', name, "=\""); _esc(io, s); print(io, '"'))
-
-_fill(io::IO, paint::AbstractString) = startswith(paint, "url(") ? _attr(io, "fill", paint) : _fill(io, tocolor(paint))
-_fill(io::IO, c) = _fill(io, tocolor(c))
-function _fill(io::IO, c::RGBA)
-    if !isvisible(c)
-        print(io, " fill=\"none\"")
-    else
-        print(io, " fill=\"", hexcolor(c), '"')
-        c.a < 1 && _attr(io, "fill-opacity", round(c.a; digits=3))
+"""Visit every primitive (groups flattened) in drawing order."""
+function foreachprim(f, prims::Vector{Prim})
+    for p in prims
+        p isa GroupPrim ? foreachprim(f, p.children) : f(p)
     end
 end
 
-function _stroke(io::IO, c::RGBA, lw::Real; dash=nothing, cap="round", join="round")
-    (isvisible(c) && lw > 0) || return
-    print(io, " stroke=\"", hexcolor(c), '"')
-    c.a < 1 && _attr(io, "stroke-opacity", round(c.a; digits=3))
-    _attr(io, "stroke-width", lw)
-    cap == "butt" || print(io, " stroke-linecap=\"", cap, '"')
-    join == "miter" || print(io, " stroke-linejoin=\"", join, '"')
-    if dash !== nothing
-        d = _dasharray(dash, lw)
-        isempty(d) || print(io, " stroke-dasharray=\"", d, '"')
-    end
-end
-
-function _dasharray(dash, lw)
-    dash === :solid && return ""
-    dash === :dash && return string(_num(4lw + 2), ' ', _num(2lw + 2))
-    dash === :dot && return string(_num(0.01), ' ', _num(2lw + 1.5))
-    dash === :dashdot && return string(_num(4lw + 2), ' ', _num(2lw + 1), ' ', _num(0.01), ' ', _num(2lw + 1))
-    dash isa AbstractString && return dash
-    dash isa AbstractVector && return join(_num.(dash), ' ')
+# dash spec -> on/off lengths in px
+function _dashvec(dash, lw)
+    (dash === nothing || dash === :solid) && return Float64[]
+    dash === :dash && return [4lw + 2, 2lw + 2]
+    dash === :dot && return [0.01, 2lw + 1.5]
+    dash === :dashdot && return [4lw + 2, 2lw + 1, 0.01, 2lw + 1]
+    dash isa AbstractString && return [parse(Float64, s) for s in split(dash, r"[\s,]+"; keepempty=false)]
+    dash isa AbstractVector && return Float64.(dash)
     throw(ArgumentError("linestyle must be :solid, :dash, :dot, :dashdot or a dash vector"))
-end
-
-# --- groups ------------------------------------------------------------------------
-
-function group(f, c::Canvas, class::AbstractString=""; attrs::AbstractString="")
-    print(c.io, "<g")
-    isempty(class) || _attr(c.io, "class", class)
-    isempty(attrs) || print(c.io, ' ', attrs)
-    print(c.io, ">\n")
-    f()
-    print(c.io, "</g>\n")
 end
 
 # --- paths -------------------------------------------------------------------------
 
-"""Incrementally built SVG path with bounding-box tracking."""
+"""Incrementally built path with bounding-box tracking."""
 mutable struct PathBuilder
-    d::IOBuffer
+    segs::Vector{Seg}
     bbox::BBox
     x::Float64
     y::Float64
 end
-PathBuilder() = PathBuilder(IOBuffer(), BBox(), 0.0, 0.0)
+PathBuilder() = PathBuilder(Seg[], BBox(), 0.0, 0.0)
 
 function M!(pb::PathBuilder, x, y)
-    print(pb.d, 'M'); _num(pb.d, x); print(pb.d, ','); _num(pb.d, y)
+    push!(pb.segs, Seg('M', x, y))
     pb.x = x; pb.y = y
     grow!(pb.bbox, x, y)
     return pb
 end
 function L!(pb::PathBuilder, x, y)
-    print(pb.d, 'L'); _num(pb.d, x); print(pb.d, ','); _num(pb.d, y)
+    push!(pb.segs, Seg('L', x, y))
     pb.x = x; pb.y = y
     grow!(pb.bbox, x, y)
     return pb
 end
-Z!(pb::PathBuilder) = (print(pb.d, 'Z'); pb)
+Z!(pb::PathBuilder) = (push!(pb.segs, Seg('Z', pb.x, pb.y)); pb)
 
 # circular arc around (cx, cy) with radius r from angle a1 to a2 (radians, screen
 # coordinates, positive = clockwise); the pen must already be at the start
@@ -135,9 +187,7 @@ function arc!(pb::PathBuilder, cx, cy, r, a1, a2)
         return arc!(pb, cx, cy, r, mid, a2)
     end
     x2 = cx + r * cos(a2); y2 = cy + r * sin(a2)
-    print(pb.d, 'A'); _num(pb.d, r); print(pb.d, ','); _num(pb.d, r)
-    print(pb.d, " 0 ", abs(Δ) > π ? 1 : 0, ',', Δ > 0 ? 1 : 0, ' ')
-    _num(pb.d, x2); print(pb.d, ','); _num(pb.d, y2)
+    push!(pb.segs, Seg('A', x2, y2, cx, cy, r, a1, a2))
     # bounding box: sample the arc
     n = max(2, ceil(Int, abs(Δ) / (π / 18)))
     for k in 0:n
@@ -148,20 +198,15 @@ function arc!(pb::PathBuilder, cx, cy, r, a1, a2)
     return pb
 end
 
-pathstring(pb::PathBuilder) = String(take!(copy(pb.d)))
-
 function path!(c::Canvas, pb::PathBuilder; fill=TRANSPARENT, stroke=TRANSPARENT, linewidth=1.0,
-               dash=nothing, cap="round", join="round", fillrule=nothing, class="", extra="")
-    d = String(take!(pb.d))
-    isempty(d) && return
-    print(c.io, "<path d=\"", d, '"')
-    isempty(class) || _attr(c.io, "class", class)
-    _fill(c.io, tocolor(fill))
-    _stroke(c.io, tocolor(stroke), linewidth; dash, cap, join)
-    fillrule === nothing || print(c.io, " fill-rule=\"", fillrule, '"')
-    isempty(extra) || print(c.io, ' ', extra)
-    print(c.io, "/>\n")
-    lw = isvisible(tocolor(stroke)) ? linewidth / 2 : 0.0
+               dash=nothing, cap="round", join="round", fillrule=nothing, class="")
+    isempty(pb.segs) && return
+    segs = pb.segs
+    pb.segs = Seg[]
+    st = tocolor(stroke)
+    _push!(c, PathPrim(segs, tocolor(fill), st, Float64(linewidth), dash, String(cap), String(join),
+                       fillrule === nothing ? nothing : String(fillrule), String(class)))
+    lw = isvisible(st) ? linewidth / 2 : 0.0
     b = pb.bbox
     grow!(c.bbox, b.xmin - lw, b.ymin - lw)
     grow!(c.bbox, b.xmax + lw, b.ymax + lw)
@@ -174,25 +219,14 @@ function line!(c::Canvas, x1, y1, x2, y2; color=:black, linewidth=1.0, dash=noth
 end
 
 function rect!(c::Canvas, x, y, w, h; fill=TRANSPARENT, stroke=TRANSPARENT, linewidth=1.0, rx=0.0,
-               class="", extra="")
-    print(c.io, "<rect")
-    _attr(c.io, "x", x); _attr(c.io, "y", y); _attr(c.io, "width", w); _attr(c.io, "height", h)
-    rx > 0 && _attr(c.io, "rx", rx)
-    isempty(class) || _attr(c.io, "class", class)
-    _fill(c.io, fill)
-    _stroke(c.io, tocolor(stroke), linewidth; join="miter")
-    isempty(extra) || print(c.io, ' ', extra)
-    print(c.io, "/>\n")
+               class="", gradient=RGBA[])
+    _push!(c, RectPrim(x, y, w, h, tocolor(fill), tocolor(stroke), linewidth, rx, String(class),
+                       collect(RGBA, gradient)))
     grow!(c.bbox, x, y); grow!(c.bbox, x + w, y + h)
 end
 
-function circle!(c::Canvas, x, y, r; fill=:black, stroke=TRANSPARENT, linewidth=1.0, extra="")
-    print(c.io, "<circle")
-    _attr(c.io, "cx", x); _attr(c.io, "cy", y); _attr(c.io, "r", r)
-    _fill(c.io, tocolor(fill))
-    _stroke(c.io, tocolor(stroke), linewidth)
-    isempty(extra) || print(c.io, ' ', extra)
-    print(c.io, "/>\n")
+function circle!(c::Canvas, x, y, r; fill=:black, stroke=TRANSPARENT, linewidth=1.0)
+    _push!(c, CirclePrim(x, y, r, tocolor(fill), tocolor(stroke), linewidth))
     grow!(c.bbox, x - r, y - r); grow!(c.bbox, x + r, y + r)
 end
 
@@ -283,33 +317,10 @@ Draw text with its anchor at (x, y), rotated by `angle` degrees (clockwise).
 """
 function text!(c::Canvas, x, y, s::AbstractString; fontsize=10.0, angle=0.0, halign=:left, valign=:center,
                color=:black, bold=false, italic=false, family=nothing, halo=nothing, halowidth=3.0,
-               class="", extra="")
+               class="")
     isempty(s) && return
-    col = tocolor(color)
-    print(c.io, "<text")
-    if angle == 0
-        _attr(c.io, "x", x); _attr(c.io, "y", y)
-    else
-        print(c.io, " transform=\"translate("); _num(c.io, x); print(c.io, ','); _num(c.io, y)
-        print(c.io, ") rotate("); _num(c.io, angle); print(c.io, ")\"")
-    end
-    dy = valign === :center ? 0.35 : valign === :top ? 0.75 : valign === :bottom ? -0.22 : 0.0
-    dy != 0 && print(c.io, " dy=\"", dy, "em\"")
-    _attr(c.io, "font-size", fontsize)
-    halign === :left || print(c.io, " text-anchor=\"", halign === :center ? "middle" : "end", '"')
-    bold && print(c.io, " font-weight=\"bold\"")
-    italic && print(c.io, " font-style=\"italic\"")
-    family === nothing || _attr(c.io, "font-family", String(family))
-    isempty(class) || _attr(c.io, "class", class)
-    _fill(c.io, col)
-    if halo !== nothing && isvisible(tocolor(halo))
-        print(c.io, " stroke=\"", hexcolor(tocolor(halo)), "\" stroke-width=\"", _num(halowidth),
-              "\" stroke-linejoin=\"round\" paint-order=\"stroke\"")
-    end
-    isempty(extra) || print(c.io, ' ', extra)
-    print(c.io, '>')
-    _esc(c.io, s)
-    print(c.io, "</text>\n")
+    _push!(c, TextPrim(x, y, String(s), fontsize, angle, halign, valign, tocolor(color), bold, italic,
+                       family === nothing ? nothing : String(family), tocolor(halo), halowidth, String(class)))
     # bounding box of the rotated text box
     w = textwidth_px(s, fontsize; bold)
     x0 = halign === :left ? 0.0 : halign === :center ? -w / 2 : -w
@@ -324,32 +335,86 @@ end
 
 # --- images ----------------------------------------------------------------------------
 
+"""An image (URL or data URI) fitted in the box (x, y, w, h), aspect ratio kept."""
 function image!(c::Canvas, x, y, w, h, href::AbstractString; opacity=1.0)
-    print(c.io, "<image")
-    _attr(c.io, "x", x); _attr(c.io, "y", y); _attr(c.io, "width", w); _attr(c.io, "height", h)
-    print(c.io, " preserveAspectRatio=\"xMidYMid meet\"")
-    opacity < 1 && _attr(c.io, "opacity", opacity)
-    print(c.io, " xlink:href=\"", href, "\"/>\n")
+    _push!(c, ImagePrim(x, y, w, h, String(href), false, opacity))
     grow!(c.bbox, x, y); grow!(c.bbox, x + w, y + h)
 end
 
-# SVG markup placed in the box (x, y, w, h) as a nested <svg> element
+"""SVG markup fitted in the box (x, y, w, h)."""
 function svgimage!(c::Canvas, x, y, w, h, svg::AbstractString)
-    m = match(r"<svg\b([^>]*?)(/?)>"s, svg)
-    m === nothing && throw(ArgumentError("no <svg> element in image markup"))
-    attrs = m.captures[1]
-    vb = match(r"\bviewBox\s*=\s*[\"']([^\"']*)[\"']"i, attrs)
-    if vb === nothing
-        mw = match(r"\swidth\s*=\s*[\"']\s*([\d.]+)"i, attrs)
-        mh = match(r"\sheight\s*=\s*[\"']\s*([\d.]+)"i, attrs)
-        (mw !== nothing && mh !== nothing) && (attrs *= " viewBox=\"0 0 $(mw.captures[1]) $(mh.captures[1])\"")
-    end
-    attrs = replace(attrs, r"\s(x|y|width|height|preserveAspectRatio)\s*=\s*(\"[^\"]*\"|'[^']*')" => "")
-    occursin("xmlns=", attrs) || (attrs *= " xmlns=\"http://www.w3.org/2000/svg\"")
-    print(c.io, "<svg")
-    _attr(c.io, "x", x); _attr(c.io, "y", y); _attr(c.io, "width", w); _attr(c.io, "height", h)
-    print(c.io, " preserveAspectRatio=\"xMidYMid meet\"", attrs, m.captures[2], ">")
-    print(c.io, svg[m.offset+ncodeunits(m.match):end])
-    println(c.io)
+    occursin(r"<svg\b"s, svg) || throw(ArgumentError("no <svg> element in image markup"))
+    _push!(c, ImagePrim(x, y, w, h, String(svg), true, 1.0))
     grow!(c.bbox, x, y); grow!(c.bbox, x + w, y + h)
+end
+
+# --- the drawn figure -----------------------------------------------------------------
+
+"""
+    Scene
+
+A fully laid-out figure: the recorded primitives, the area they cover (with
+the margin added), the background colour and the default font. Every backend
+draws from a `Scene`.
+"""
+struct Scene
+    prims::Vector{Prim}
+    x0::Float64
+    y0::Float64
+    width::Float64
+    height::Float64
+    background::RGBA
+    font::String
+end
+
+# flattened arc: points from a1 to a2 (excluding the start), roughly every 4° and ≤ 3 px apart
+function _arcpoints(s::Seg)
+    Δ = s.a2 - s.a1
+    n = clamp(ceil(Int, max(abs(Δ) / deg2rad(4), abs(Δ) * s.r / 3)), 1, 720)
+    return [(s.cx + s.r * cos(s.a1 + Δ * k / n), s.cy + s.r * sin(s.a1 + Δ * k / n)) for k in 1:n]
+end
+
+"""
+Polyline subpaths of a path, arcs flattened; each is a vector of points and a
+flag saying whether it is closed.
+"""
+function _polylines(segs::Vector{Seg})
+    out = Tuple{Vector{Tuple{Float64,Float64}},Bool}[]
+    cur = Tuple{Float64,Float64}[]
+    flush!(closed) = (length(cur) > 1 && push!(out, (cur, closed)); cur = Tuple{Float64,Float64}[])
+    for s in segs
+        if s.op == 'M'
+            flush!(false)
+            push!(cur, (s.x, s.y))
+        elseif s.op == 'L'
+            isempty(cur) && push!(cur, (s.x, s.y))
+            push!(cur, (s.x, s.y))
+        elseif s.op == 'A'
+            append!(cur, _arcpoints(s))
+        elseif s.op == 'Z'
+            start = isempty(cur) ? (s.x, s.y) : cur[1]
+            flush!(true)
+            push!(cur, start)       # the pen returns to the subpath start
+        end
+    end
+    flush!(false)
+    return out
+end
+
+# cubic Bézier pieces (≤ 90° each) approximating an arc: (c1, c2, end) triples
+function _arcbeziers(s::Seg)
+    Δ = s.a2 - s.a1
+    n = max(1, ceil(Int, abs(Δ) / (π / 2) - 1e-9))
+    δ = Δ / n
+    k = 4 / 3 * tan(δ / 4)
+    out = NTuple{3,Tuple{Float64,Float64}}[]
+    for i in 0:n-1
+        a = s.a1 + δ * i; b = a + δ
+        p0 = (s.cx + s.r * cos(a), s.cy + s.r * sin(a))
+        p3 = (s.cx + s.r * cos(b), s.cy + s.r * sin(b))
+        c1 = (p0[1] - k * s.r * sin(a), p0[2] + k * s.r * cos(a))
+        c2 = (p3[1] + k * s.r * sin(b), p3[2] - k * s.r * cos(b))
+        push!(out, (c1, c2, p3))
+    end
+    return out
 end

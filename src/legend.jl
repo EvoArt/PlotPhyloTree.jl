@@ -27,7 +27,8 @@ function _drawlegend!(c::Canvas, ctx::Ctx)
     secs = _legendsections(ctx)
     isempty(secs) && return
     polar = ctx.coord isa Polar
-    pos === :auto && (pos = polar ? :topright : :right)
+    auto = pos === :auto
+    auto && (pos = polar ? :topright : :right)
     fs = clamp(ctx.fs, 9.0, 12.0)
     fg = tocolor(ctx.th[:fg])
     muted = tocolor(ctx.th[:muted])
@@ -72,7 +73,22 @@ function _drawlegend!(c::Canvas, ctx::Ctx)
         top = pos in (:topright, :topleft)
         x0 = right ? b.xmax - W : b.xmin
         y0 = top ? b.ymin : b.ymax - H
-        if polar
+        free = false
+        if auto
+            # the first corner of the drawing with nothing under the box (plus a gap)
+            cl = collider(c)
+            g = 10.0
+            for (r, tp) in ((true, true), (false, true), (true, false), (false, false))
+                xa = r ? b.xmax - W : b.xmin
+                ya = tp ? b.ymin : b.ymax - H
+                if !collides(cl, _rectpts(xa - g, ya - g, W + 2g, H + 2g))
+                    x0, y0, free = xa, ya, true
+                    right, top = r, tp
+                    break
+                end
+            end
+        end
+        if polar && !free
             # keep the box clear of the circular plot
             Rc = max(-b.xmin, b.xmax, -b.ymin, b.ymax) + 14
             nx = right ? x0 : x0 + W
@@ -131,14 +147,7 @@ function _drawlegend!(c::Canvas, ctx::Ctx)
 end
 
 function _colorbar!(c::Canvas, x, y, w, h, cm::Vector{RGBA})
-    id = newid!(c, "cb")
-    print(c.defs, "<linearGradient id=\"", id, "\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"0\">")
-    n = length(cm)
-    for (k, col) in enumerate(cm)
-        print(c.defs, "<stop offset=\"", round((k - 1) / (n - 1); digits=4), "\" stop-color=\"", hexcolor(col), "\"/>")
-    end
-    print(c.defs, "</linearGradient>\n")
-    rect!(c, x, y, w, h; fill="url(#$id)")
+    rect!(c, x, y, w, h; gradient=cm)
 end
 
 function _drawtitle!(c::Canvas, ctx::Ctx)

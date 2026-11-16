@@ -16,7 +16,7 @@ savefig("tree.svg", p)
 """
 module PlotPhyloTree
 
-using Base64: base64encode
+using Base64: base64encode, base64decode
 using PhyloIO
 using PhyloIO: PhyloTree
 
@@ -28,17 +28,23 @@ export PhyloTree, nnodes, ntips, isleaf, isroot, parentnode, childnodes, branchl
 
 export TreePlot, treeplot, tiplabels!, notiplabels!, highlight!, cladelabel!, colorclade!, colorbranches!,
        nodepoints!, tippoints!, support!, nodelabels!, nodepies!, nodebars!, timescale!, scalebar!,
-       tipheatmap!, tipbars!, tipimages!, legend!, savefig, preview, svgstring, palette, colormap
+       tipheatmap!, tipbars!, tipimages!, legend!, savefig, preview, svgstring, tikzstring, cetzstring,
+       palette, colormap, phyloplot, phyloplot!, phylofigure
 
 include("colors.jl")
 include("text.jl")
 include("canvas.jl")
+include("svg.jl")
+include("collide.jl")
 include("coords.jl")
 include("plot.jl")
 include("layers.jl")
 include("rings.jl")
 include("legend.jl")
 include("io.jl")
+include("tikz.jl")
+include("cetz.jl")
+include("makie.jl")
 
 function __init__()
     if isinteractive() && !any(d -> d isa BrowserDisplay, Base.Multimedia.displays)

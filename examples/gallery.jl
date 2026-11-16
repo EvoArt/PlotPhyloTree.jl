@@ -1,4 +1,5 @@
-# Gallery: every layer in every layout. Writes examples/out/gallery/*.png.
+# Gallery: every layer in every layout. Writes examples/out/gallery/*.{png,svg},
+# plus TikZ (tikz/*.tex) and CeTZ (typst/*.typ) versions.
 # Run: julia --project=examples examples/gallery.jl [name ...]
 using PlotPhyloTree, Librsvg_jll, Random
 
@@ -43,8 +44,14 @@ function blob(col, k)
     """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><polygon points="$pts" fill="$col"/></svg>"""
 end
 
-save(name, p) = (savefig(joinpath(OUT, name * ".png"), p; scale=1.5);
-                 savefig(joinpath(OUT, name * ".svg"), p); println("  ", name))
+mkpath(joinpath(OUT, "tikz")); mkpath(joinpath(OUT, "typst"))
+function save(name, p)
+    savefig(joinpath(OUT, name * ".png"), p; scale=1.5)
+    savefig(joinpath(OUT, name * ".svg"), p)
+    savefig(joinpath(OUT, "tikz", name * ".tex"), p)      # compile with pdflatex
+    savefig(joinpath(OUT, "typst", name * ".typ"), p)     # compile with typst
+    println("  ", name)
+end
 
 const GALLERY = Dict{String,Function}()
 

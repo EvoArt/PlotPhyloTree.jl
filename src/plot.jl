@@ -369,11 +369,11 @@ band(ctx::Ctx, l::Layer) = ctx.bands[bandkey(l)]
 # --- rendering --------------------------------------------------------------------------
 
 """
-    render(p::TreePlot) -> String
+    scene(p::TreePlot) -> Scene
 
-The SVG document for `p`.
+Lay out `p` and record everything it draws; the backends translate the result.
 """
-function render(p::TreePlot)
+function scene(p::TreePlot)
     ctx = geometry(p)
     c = Canvas()
     layers = sort(p.layers; by=l -> (zorder(l), suborder(l, p)))   # stable within a level
@@ -385,34 +385,24 @@ function render(p::TreePlot)
     while k <= length(layers)
         draw!(c, layers[k], ctx); k += 1
     end
+    resolve_labels!(c)          # movable labels go where they clash with nothing
     _drawscalebar!(c, ctx)
     _drawlegend!(c, ctx)
     _drawtitle!(c, ctx)
-    return _svgdocument(c, ctx)
-end
-
-function _svgdocument(c::Canvas, ctx::Ctx)
-    m = ctx.p.opt[:margin]
+    m = p.opt[:margin]
     b = c.bbox
     isempty_bbox(b) && (b = BBox(0, 0, 1, 1))
     x0 = floor(b.xmin - m); y0 = floor(b.ymin - m)
     W = ceil(b.xmax + m - x0); H = ceil(b.ymax + m - y0)
-    io = IOBuffer()
-    print(io, "<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\"")
-    _attr(io, "width", W); _attr(io, "height", H)
-    print(io, " viewBox=\""); _num(io, x0); print(io, ' '); _num(io, y0); print(io, ' ')
-    _num(io, W); print(io, ' '); _num(io, H); print(io, '"')
-    _attr(io, "font-family", ctx.p.opt[:font])
-    print(io, ">\n")
-    defs = String(take!(c.defs))
-    isempty(defs) || print(io, "<defs>\n", defs, "</defs>\n")
-    bg = tocolor(ctx.th[:bg])
-    isvisible(bg) && (print(io, "<rect"); _attr(io, "x", x0); _attr(io, "y", y0); _attr(io, "width", W);
-                      _attr(io, "height", H); _fill(io, bg); print(io, "/>\n"))
-    print(io, String(take!(c.io)))
-    print(io, "</svg>\n")
-    return String(take!(io))
+    return Scene(c.prims, x0, y0, W, H, tocolor(ctx.th[:bg]), p.opt[:font])
 end
+
+"""
+    render(p::TreePlot) -> String
+
+The SVG document for `p`.
+"""
+render(p::TreePlot) = svgdocument(scene(p))
 
 # --- branches ------------------------------------------------------------------------
 

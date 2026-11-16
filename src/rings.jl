@@ -121,7 +121,7 @@ function draw!(c::Canvas, l::TimeScale, ctx::Ctx)
                 ra < rb || continue
                 pb = PathBuilder()
                 region!(pb, co, ra, rb, p1, p2)
-                path!(c, pb; fill=withalpha(col, l.geoalpha))
+                path!(c, pb; fill=withalpha(col, l.geoalpha), class="background")
             end
         elseif l.bands && length(tk) >= 2
             edges = sort(tk)
@@ -132,7 +132,7 @@ function draw!(c::Canvas, l::TimeScale, ctx::Ctx)
                 ra < rb || continue
                 pb = PathBuilder()
                 region!(pb, co, ra, rb, p1, p2)
-                path!(c, pb; fill=bandc)
+                path!(c, pb; fill=bandc, class="background")
             end
         end
         if l.rings
@@ -143,7 +143,7 @@ function draw!(c::Canvas, l::TimeScale, ctx::Ctx)
                 move!(pb, co, r, p1)
                 across!(pb, co, r, p1, p2)
             end
-            path!(c, pb; stroke=grid, linewidth=0.7, dash=:dash)
+            path!(c, pb; stroke=grid, linewidth=0.7, dash=:dash, class="grid")
         end
         if l.axis || l.labels
             _timeaxis!(c, ctx, l, tk, rage, gapc, fs, muted)
@@ -192,14 +192,18 @@ function _timeaxis!(c, ctx, l::TimeScale, tk, rage, gapc, fs, muted)
     elseif l.labels
         for (v, r) in zip(tk, rs)
             x, y = ax(r)
-            text!(c, x + (5 + fs * 0.5) * down[1], y + (5 + fs * 0.5) * down[2], _fmttick(v); fontsize=fs,
-                  angle=ang, halign=:center, color=muted)
+            # a tick label that would run into the tree (near the root) is left out;
+            # the one at the tips always stays
+            softtext!(c, [(; x=x + (5 + fs * 0.5) * down[1], y=y + (5 + fs * 0.5) * down[2], text=_fmttick(v),
+                           fontsize=fs, angle=ang, halign=:center, color=muted)];
+                      required=v == minimum(tk), priority=3)
         end
         if !isempty(l.title)
-            x, y = ax((rlo + rhi) / 2)
+            # centred under the ticks, or slid towards either end if that clashes
             off = 7 + fs * 1.6
-            text!(c, x + off * down[1], y + off * down[2], l.title; fontsize=fs, angle=ang, halign=:center,
-                  color=muted)
+            softtext!(c, [(; x=ax(rlo + f * (rhi - rlo))[1] + off * down[1], y=ax(rlo + f * (rhi - rlo))[2] + off * down[2],
+                           text=l.title, fontsize=fs, angle=ang, halign=:center, color=muted)
+                          for f in (0.5, 0.65, 0.35, 0.8, 0.2)]; required=true, priority=2)
         end
     end
     if l.geo !== nothing
@@ -210,18 +214,25 @@ function _timeaxis!(c, ctx, l::TimeScale, tk, rage, gapc, fs, muted)
             lo < hi || continue
             r1 = rage(hi); r2 = rage(lo)
             w = r2 - r1
-            s = textwidth_px(name, fs * 0.85) < w - 4 ? name : textwidth_px(abbr, fs * 0.85) < w - 2 ? abbr : ""
-            isempty(s) && continue
+            # the full name, else the abbreviation, wherever it fits in the interval
+            # and clashes with nothing; otherwise the name is left out
+            names = [s for s in (name, abbr) if textwidth_px(s, fs * 0.85) < w - 2]
+            isempty(names) && continue
+            gfs = fs * 0.85
+            gcol = darken(col, 0.45)
             if polar
                 x, y = ax((r1 + r2) / 2)
-                text!(c, x - (4 + fs * 0.45) * down[1], y - (4 + fs * 0.45) * down[2], s; fontsize=fs * 0.85,
-                      angle=ang, halign=:center, color=darken(col, 0.45))
+                # beside the axis on the tree's side, or beyond the tick labels (and title)
+                far = (l.labels ? 7 + fs * 1.6 : 4 + gfs * 0.45) + (isempty(l.title) || !l.labels ? 0.0 : fs * 1.25)
+                sides = (-(4 + gfs * 0.45), far)
+                dv = down
             else
                 x, y = xy(co, (r1 + r2) / 2, 0.5)
-                v = acrossvec(co, 0.5)
-                text!(c, x - (fs * 0.9) * v[1], y - (fs * 0.9) * v[2], s; fontsize=fs * 0.85, angle=ang,
-                      halign=:center, color=darken(col, 0.45))
+                dv = .-acrossvec(co, 0.5)            # above the first tip
+                sides = (fs * 0.9,)
             end
+            softtext!(c, [(; x=x + o * dv[1], y=y + o * dv[2], text=s, fontsize=gfs, angle=ang, halign=:center,
+                           color=gcol) for s in names for o in sides]; priority=1)
         end
     end
 end

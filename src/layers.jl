@@ -539,6 +539,7 @@ struct NodeLabels <: Layer
     position::Symbol
     bold::Bool
     halo::Bool
+    hideoverlaps::Bool
 end
 zorder(::NodeLabels) = 6.5
 
@@ -549,11 +550,14 @@ zorder(::NodeLabels) = 6.5
 Write text at nodes: an annotation key (default the support values), node
 labels (`text = :label`), or per-node values. `position = :branch` puts it
 above the branch just before the node (the usual place for support values);
-`:node` puts it just after the node; text too long for its branch is put
-there too, so it does not cross other branches.
+`:node` puts it just after the node. A label that would overlap something
+else moves to the other place (or below the branch); text too long for its
+branch always goes after the node. With `hideoverlaps = true`, labels that
+fit nowhere are left out instead of drawn over other things.
 """
 function nodelabels!(p::TreePlot; text=:support, nodes=:internal, fontsize=nothing, color=nothing,
-                     position::Symbol=:branch, digits::Integer=2, bold::Bool=false, halo::Bool=true)
+                     position::Symbol=:branch, digits::Integer=2, bold::Bool=false, halo::Bool=true,
+                     hideoverlaps::Bool=false)
     t = p.tree
     vals = text === :label ? Any[isempty(s) ? nothing : s for s in t.label] : nodevalues(p, text)
     sel = _selectnodes(p, nodes)
@@ -561,7 +565,7 @@ function nodelabels!(p::TreePlot; text=:support, nodes=:internal, fontsize=nothi
     keep = [i for i in sel if vals[i] !== nothing && i != t.root]
     fs = fontsize === nothing ? NaN : Float64(fontsize)
     col = color === nothing ? tocolor(p.opt[:theme][:muted]) : tocolor(color)
-    push!(p.layers, NodeLabels(keep, [fmt(vals[i]) for i in keep], fs, col, position, bold, halo))
+    push!(p.layers, NodeLabels(keep, [fmt(vals[i]) for i in keep], fs, col, position, bold, halo, hideoverlaps))
     return p
 end
 
@@ -573,21 +577,31 @@ function draw!(c::Canvas, l::NodeLabels, ctx::Ctx)
     group(c, "nodelabels") do
         t = p.tree
         for (k, i) in enumerate(l.nodes)
+            s = l.text[k]
             ang, ha = radial_text_params(co, p.pos[i])
-            # text that does not fit on its branch would cross the parent's
-            # connector, so it goes just past the node instead
+            a = deg2rad(ang)
+            up = (sin(a), -cos(a))                   # "up" for the rotated text
+            spec(x, y, h, v) = (; x, y, text=s, fontsize=fs, angle=ang, halign=h, valign=v, color=l.color,
+                                bold=l.bold, halo, halowidth=2.5)
+            # on the branch (above, then below it), or just past the node; text too
+            # long for its branch would cross the parent's connector, so it skips those
+            # (each also a little further out, to clear a marker drawn at the node)
             blen = ctx.r[i] - ctx.r[t.parent[i]]
-            fits = textwidth_px(l.text[k], fs; bold=l.bold) + 6 <= blen
-            if l.position === :branch && fits
-                x, y = xy(co, ctx.r[i] - 3, p.pos[i])
-                ha = ha === :left ? :right : :left
-                text!(c, x, y, l.text[k]; fontsize=fs, angle=ang, halign=ha, valign=:bottom, color=l.color,
-                      bold=l.bold, halo, halowidth=2.5)
-            else
-                x, y = xy(co, ctx.r[i] + 4, p.pos[i])
-                text!(c, x, y, l.text[k]; fontsize=fs, angle=ang, halign=ha, color=l.color, bold=l.bold, halo,
-                      halowidth=2.5)
+            bh = ha === :left ? :right : :left
+            onbranch = NamedTuple[]
+            for gap in (3.0, 7.0)
+                textwidth_px(s, fs; bold=l.bold) + gap + 3 <= blen || continue
+                bx, by = xy(co, ctx.r[i] - gap, p.pos[i])
+                push!(onbranch, spec(bx + 1.2up[1], by + 1.2up[2], bh, :bottom),
+                      spec(bx - 1.2up[1], by - 1.2up[2], bh, :top))
             end
+            atnode = NamedTuple[]
+            for gap in (4.0, 8.0)
+                nx, ny = xy(co, ctx.r[i] + gap, p.pos[i])
+                push!(atnode, spec(nx, ny, ha, :center))
+            end
+            cands = l.position === :branch ? vcat(onbranch, atnode) : vcat(atnode, onbranch)
+            softtext!(c, cands; required=!l.hideoverlaps, priority=0)
         end
     end
 end

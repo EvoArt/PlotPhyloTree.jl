@@ -150,6 +150,94 @@ end
         @test without < with
     end
 
+    @testset "display list" begin
+        p = treeplot(t; layout=:circular, title="T")
+        highlight!(p, clades(t, 2)[1]; label="A")
+        nodelabels!(p)
+        sc = PlotPhyloTree.scene(p)
+        @test sc.width > 0 && sc.height > 0
+        texts = PlotPhyloTree.TextPrim[]
+        PlotPhyloTree.foreachprim(q -> q isa PlotPhyloTree.TextPrim && push!(texts, q), sc.prims)
+        @test count(q -> replace(q.text, ' ' => '_') in names, texts) == ntips(t)   # labels show _ as space
+        # arcs: Bézier pieces and flattened points stay on the circle
+        s = PlotPhyloTree.Seg('A', 10cos(2.0), 10sin(2.0), 0.0, 0.0, 10.0, 0.3, 2.0)
+        for (c1, c2, e) in PlotPhyloTree._arcbeziers(s)
+            @test hypot(e...) ≈ 10
+        end
+        pb = PlotPhyloTree.PathBuilder()
+        PlotPhyloTree.M!(pb, 10cos(0.3), 10sin(0.3))
+        PlotPhyloTree.arc!(pb, 0, 0, 10, 0.3, 2.0)
+        PlotPhyloTree.Z!(pb)
+        ((pts, closed),) = PlotPhyloTree._polylines(pb.segs)
+        @test closed && all(q -> hypot(q...) ≈ 10, pts)
+        @test pts[end] == (10cos(2.0), 10sin(2.0))
+    end
+
+    @testset "TikZ" begin
+        p = treeplot(t; layout=:circular, title="Tree_1 & co", color=rand(nnodes(t)))
+        highlight!(p, clades(t, 2)[1]; label="A")
+        support!(p)
+        nodelabels!(p)
+        tex = tikzstring(p)
+        @test startswith(tex, "% PlotPhyloTree figure") && endswith(tex, "\\end{tikzpicture}\n")
+        @test count('{', tex) == count('}', tex)
+        @test occursin("arc[start angle=", tex)
+        @test occursin("Tree\\_1 \\& co", tex)
+        @test occursin("\\shade[left color=", tex)                  # colour bar
+        @test occursin("\\ensuremath{\\geq}", tex)                  # support legend "≥ 0.95"
+        @test !occursin(r"[≥≤]", tex)
+        @test occursin(r"\\node\[anchor=mid west, inner sep=0pt", tex)
+        doc = tikzstring(p; standalone=true, scale=0.5)
+        @test startswith(doc, "\\documentclass") && endswith(doc, "\\end{document}\n")
+        @test occursin("line width=0.5bp", doc) || occursin("line width=0.", doc)
+        @test PlotPhyloTree._tikzesc("50% a_b {x} ~ ^ \\ α") ==
+              "50\\% a\\_b \\{x\\} \\textasciitilde{} \\^{} \\textbackslash{} \\ensuremath{\\alpha}"
+    end
+
+    @testset "CeTZ" begin
+        p = treeplot(t; layout=:fan, title="Say \"hi\"", color=rand(nnodes(t)))
+        highlight!(p, clades(t, 2)[1]; label="A")
+        nodelabels!(p)
+        typ = cetzstring(p)
+        @test startswith(typ, "// PlotPhyloTree figure")
+        @test occursin("#import \"@preview/cetz:$(PlotPhyloTree.CETZ_VERSION)\"", typ)
+        @test occursin("#cetz.canvas(length: 1pt, {", typ)
+        @test occursin("merge-path(", typ) && occursin("bezier(", typ)
+        @test occursin("gradient.linear(", typ)
+        @test occursin("\"Say \\\"hi\\\"\"", typ)
+        @test occursin("anchor: \"mid-west\"", typ)
+        @test !occursin("#set page", typ)
+        doc = cetzstring(p; standalone=true, cetz="0.3.0")
+        @test occursin("#set page(width: auto, height: auto, margin: 0pt", doc)
+        @test occursin("cetz:0.3.0", doc)
+    end
+
+    @testset "saving TikZ and Typst with images" begin
+        p = treeplot(t; layout=:circular)
+        img = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><rect width="10" height="10"/></svg>"""
+        tipimages!(p, Dict(names[1] => img))
+        dir = mktempdir()
+        f = savefig(joinpath(dir, "fig.typ"), p)
+        @test isfile(joinpath(dir, "fig-img-1.svg"))
+        @test occursin("image(\"fig-img-1.svg\"", read(f, String))
+        @test occursin("#set page", read(f, String))
+        savefig(joinpath(dir, "inc.typ"), p; standalone=false)
+        @test !occursin("#set page", read(joinpath(dir, "inc.typ"), String))
+        # TikZ: SVG images need converting to PDF (Librsvg extension, not loaded here)
+        tex = @test_logs (:warn, r"SVG image 1") match_mode = :any savefig(joinpath(dir, "fig.tex"), p)
+        @test startswith(read(tex, String), "\\documentclass")
+        savefig(joinpath(dir, "fig.tikz"), p)
+        @test startswith(read(joinpath(dir, "fig.tikz"), String), "% PlotPhyloTree")
+        # a PNG data URI is decoded and written beside the file
+        png = UInt8[0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, zeros(UInt8, 8)..., 0, 0, 0, 2, 0, 0, 0, 1]
+        q = treeplot(t)
+        tipimages!(q, Dict(names[2] => "data:image/png;base64," * PlotPhyloTree.base64encode(png)))
+        savefig(joinpath(dir, "png.tex"), q)
+        @test read(joinpath(dir, "png-img-1.png")) == png
+        @test occursin("{png-img-1.png}", read(joinpath(dir, "png.tex"), String))
+        @test_throws ArgumentError savefig(joinpath(dir, "x.svg"), q; standalone=true)
+    end
+
     @testset "saving" begin
         p = treeplot(t)
         for ext in (".svg", ".html")
@@ -160,5 +248,86 @@ end
         @test_throws ArgumentError savefig(tempname() * ".gif", p)
         @test sprint(show, p) == "TreePlot(24 tips, rectangular, 1 layers)"
         @test showable(MIME"image/svg+xml"(), p)
+    end
+
+    @testset "label collisions" begin
+        PT = PlotPhyloTree
+        leaves(prims) = (v = PT.Prim[]; PT.foreachprim(x -> push!(v, x), prims); v)
+        # does `x` overlap anything in `others`?
+        function clashes(x, others)
+            cl = PT.Collider()
+            for o in others
+                PT._addprim!(cl, o)
+            end
+            q = x isa PT.TextPrim ? PT._textquad(x) : PT._rectpts(x.x, x.y, x.w, x.h)
+            return PT.collides(cl, q)
+        end
+
+        @testset "geometry" begin
+            sq = PT._rectpts(0, 0, 10, 10)
+            @test PT._convex_overlap(sq, PT._rectpts(5, 5, 10, 10))
+            @test !PT._convex_overlap(sq, PT._rectpts(11, 0, 5, 5))
+            @test PT._convex_overlap(sq, [(-5.0, 5.0), (15.0, 5.0)])          # a segment through it
+            @test !PT._convex_overlap(sq, [(-5.0, 12.0), (15.0, 30.0)])
+            @test PT._inside((5.0, 5.0), sq) && !PT._inside((15.0, 5.0), sq)
+        end
+
+        @testset "soft labels take the first free candidate" begin
+            c = PT.Canvas()
+            PT.line!(c, -50, 0, 50, 0; color=:black)
+            cand(y) = (; x=0.0, y, text="label", fontsize=10.0, halign=:center)
+            PT.softtext!(c, [cand(0.0), cand(20.0)])                    # first one sits on the line
+            PT.softtext!(c, [cand(0.0)])                                # nowhere free: dropped
+            PT.softtext!(c, [cand(0.0)]; required=true)                 # nowhere free: drawn anyway
+            PT.softtext!(c, [cand(20.0), cand(40.0)])                   # 20 is taken by the first label
+            PT.resolve_labels!(c)
+            ts = [x for x in leaves(c.prims) if x isa PT.TextPrim]
+            @test [t.y for t in ts] == [20.0, 0.0, 40.0]
+            @test !any(x -> x isa PT.SoftTextPrim, leaves(c.prims))
+            @test c.bbox.ymax >= 40
+            # wedges, bands and grid lines never block a label
+            c2 = PT.Canvas()
+            pb = PT.PathBuilder(); PT.M!(pb, -50, -50); PT.L!(pb, 50, -50); PT.L!(pb, 50, 50); PT.Z!(pb)
+            PT.path!(c2, pb; fill=:red, class="highlight")
+            PT.softtext!(c2, [cand(0.0)])
+            PT.resolve_labels!(c2)
+            @test only(x for x in leaves(c2.prims) if x isa PT.TextPrim).y == 0.0
+        end
+
+        @testset "time-scale names keep off the tree" begin
+            tr = randtree(70; rng=Xoshiro(11), height=100)
+            ladderize!(tr)
+            p = treeplot(tr; layout=:circular, openangle=20)
+            timescale!(p; geo=:periods, title="Ma")
+            s = PT.scene(p)
+            prims = leaves(s.prims)
+            geonames = Set(vcat([[g[1], g[2]] for g in PT.GEO_PERIODS]...))
+            placed = [x for x in prims if x isa PT.TextPrim && x.text in geonames]
+            @test !isempty(placed)
+            for g in placed
+                @test !clashes(g, filter(x -> x !== g, prims))
+            end
+            @test !any(x -> x isa PT.SoftTextPrim, prims)
+        end
+
+        @testset "support labels and legend avoid everything" begin
+            tr = randtree(40; rng=Xoshiro(5))
+            for i in internalnodes(tr)
+                setdata!(tr, i, :support, 99)
+            end
+            p = treeplot(tr; layout=:circular)
+            nodelabels!(p; hideoverlaps=true)
+            support!(p)
+            s = PT.scene(p)
+            prims = leaves(s.prims)
+            labels = [x for x in prims if x isa PT.TextPrim && x.text == "99"]
+            @test !isempty(labels)
+            @test all(l -> !clashes(l, filter(x -> x !== l, prims)), labels)
+            lg = only(x for x in s.prims if x isa PT.GroupPrim && x.class == "legend")
+            others = [x for x in prims if !(x in leaves(lg.children))]
+            for x in leaves(lg.children)
+                x isa Union{PT.TextPrim,PT.RectPrim} && @test !clashes(x, others)
+            end
+        end
     end
 end
