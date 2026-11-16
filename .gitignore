@@ -1,0 +1,10 @@
+Manifest*.toml
+/examples/out/
+/docs/build/
+
+# local notes / assistant files — never commit
+HANDOVER.md
+CLAUDE.md
+CLAUDE.local.md
+.claude/
+/phylogeny-1024x950.jpg

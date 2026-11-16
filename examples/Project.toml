@@ -1,0 +1,4 @@
+[deps]
+Librsvg_jll = "925c91fb-5dd6-59dd-8e8c-345e74382d89"
+PhyloIO = "2031dd8a-3ee5-4b40-a1c7-31da38b3f347"
+PlotPhyloTree = "13412a18-f2a1-4ce8-a2da-bce8c134a8fd"
