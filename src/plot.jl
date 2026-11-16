@@ -52,7 +52,7 @@ const THEMES = Dict{Symbol,Dict{Symbol,Any}}(
 """
     treeplot(tree; kwargs...) -> TreePlot
 
-Start a tree figure. `tree` is a [`PhyloTree`](@ref), a Newick string, or a
+Start a tree figure. `tree` is a `PhyloTree`, a Newick string, or a
 path to a Newick/Nexus file.
 
 # Layout

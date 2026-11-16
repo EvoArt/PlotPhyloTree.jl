@@ -1,0 +1,64 @@
+# API
+
+Tree reading, writing and manipulation (`readnewick`, `readnexus`, `mrca`,
+`ladderize!`, `tips`, …) come from
+[PhyloIO.jl](https://github.com/EvoArt/PhyloIO.jl) and are re-exported.
+
+```@docs
+PlotPhyloTree
+```
+
+## Figure
+
+```@docs
+treeplot
+PlotPhyloTree.nodevalues
+TreePlot
+```
+
+## Layers
+
+```@docs
+tiplabels!
+notiplabels!
+highlight!
+cladelabel!
+colorclade!
+colorbranches!
+nodepoints!
+tippoints!
+support!
+nodelabels!
+nodepies!
+nodebars!
+timescale!
+scalebar!
+tipheatmap!
+tipbars!
+tipimages!
+legend!
+```
+
+## Output
+
+```@docs
+savefig
+svgstring
+tikzstring
+cetzstring
+preview
+```
+
+## Makie
+
+```@docs
+phyloplot
+phylofigure
+```
+
+## Colours
+
+```@docs
+palette
+colormap
+```
