@@ -29,4 +29,4 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 test = ["Random", "Test"]
 
 [sources]
-PhyloIO = {path = "../PhyloIO"}
+PhyloIO = {url = "https://github.com/EvoArt/PhyloIO.jl", rev = "main"}
