@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><meta name="referrer" content="no-referrer"/><title>Gallery · PlotPhyloTree.jl</title><meta name="title" content="Gallery · PlotPhyloTree.jl"/><meta property="og:title" content="Gallery · PlotPhyloTree.jl"/><meta property="twitter:title" content="Gallery · PlotPhyloTree.jl"/><meta name="description" content="Documentation for PlotPhyloTree.jl."/><meta property="og:description" content="Documentation for PlotPhyloTree.jl."/><meta property="twitter:description" content="Documentation for PlotPhyloTree.jl."/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.63.2/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">PlotPhyloTree.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li class="is-active"><a class="tocitem" href>Gallery</a><ul class="internal"><li><a class="tocitem" href="#Rectangular"><span>Rectangular</span></a></li><li><a class="tocitem" href="#Dated-tree"><span>Dated tree</span></a></li><li><a class="tocitem" href="#Tip-data"><span>Tip data</span></a></li><li><a class="tocitem" href="#Branch-styles"><span>Branch styles</span></a></li><li><a class="tocitem" href="#Direction"><span>Direction</span></a></li><li><a class="tocitem" href="#Dendrogram"><span>Dendrogram</span></a></li><li><a class="tocitem" href="#Circular-with-rings"><span>Circular with rings</span></a></li><li><a class="tocitem" href="#Fan"><span>Fan</span></a></li><li><a class="tocitem" href="#Clade-labels,-dark-theme"><span>Clade labels, dark theme</span></a></li><li><a class="tocitem" href="#Nested-highlights"><span>Nested highlights</span></a></li><li><a class="tocitem" href="#Ancestral-states"><span>Ancestral states</span></a></li><li><a class="tocitem" href="#Large-tree"><span>Large tree</span></a></li></ul></li><li><a class="tocitem" href="../makie/">Makie</a></li><li><a class="tocitem" href="../tikz/">TikZ / LaTeX</a></li><li><a class="tocitem" href="../typst/">CeTZ / Typst</a></li><li><a class="tocitem" href="../api/">API</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Gallery</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Gallery</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/EvoArt/PlotPhyloTree.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/EvoArt/PlotPhyloTree.jl/blob/main/docs/src/gallery.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Gallery"><a class="docs-heading-anchor" href="#Gallery">Gallery</a><a id="Gallery-1"></a><a class="docs-heading-anchor-permalink" href="#Gallery" title="Permalink"></a></h1><p>Each panel uses a random dated tree with BEAST-style node annotations, made by this helper:</p><pre><code class="language-julia hljs">using PlotPhyloTree, Random
+
+function datedtree(n; seed=1, height=60)
+    rng = Xoshiro(seed)
+    t = randtree(n; rng, height, labels=[&quot;Species_$i&quot; for i in 1:n])
+    ladderize!(t)
+    H = treeheight(t)
+    x = rootdistance(t)
+    for i in internalnodes(t)
+        age = H - x[i]
+        w = 0.08age + 1
+        setdata!(t, i, Symbol(&quot;height_95%_HPD&quot;), [max(age - w * rand(rng), 0.0), age + w * rand(rng)])
+        setdata!(t, i, :posterior, rand(rng, [1.0, 1.0, 0.99, 0.97, 0.9, 0.8, 0.6]))
+    end
+    for i in 1:nnodes(t)
+        setdata!(t, i, :rate, exp(0.4randn(rng)))
+    end
+    return t, rng
+end
+
+# k clades, found by repeatedly splitting the largest
+function someclades(t, k; minsize=3)
+    cl = [rootnode(t)]
+    while length(cl) &lt; k
+        big = argmax(i -&gt; length(tips(t, i)), cl)
+        filter!(!=(big), cl)
+        append!(cl, childnodes(t, big))
+    end
+    rank = Dict(i =&gt; k for (k, i) in enumerate(tips(t)))
+    return sort!(filter!(i -&gt; length(tips(t, i)) &gt;= minsize, cl); by=i -&gt; rank[first(tips(t, i))])
+end</code></pre><h2 id="Rectangular"><a class="docs-heading-anchor" href="#Rectangular">Rectangular</a><a id="Rectangular-1"></a><a class="docs-heading-anchor-permalink" href="#Rectangular" title="Permalink"></a></h2><pre><code class="language-julia hljs">t, _ = datedtree(30)
+p = treeplot(t)
+nodelabels!(p; text=:posterior)
+scalebar!(p)
+p</code></pre><img src="22e2e4fa.svg" alt="Example block output"/><h2 id="Dated-tree"><a class="docs-heading-anchor" href="#Dated-tree">Dated tree</a><a id="Dated-tree-1"></a><a class="docs-heading-anchor-permalink" href="#Dated-tree" title="Permalink"></a></h2><pre><code class="language-julia hljs">t, _ = datedtree(36; seed=3, height=80)
+p = treeplot(t; italic=true)
+timescale!(p; geo=:epochs, title=&quot;Ma&quot;)
+nodebars!(p)
+support!(p; key=:posterior)
+p</code></pre><img src="7652fca1.svg" alt="Example block output"/><h2 id="Tip-data"><a class="docs-heading-anchor" href="#Tip-data">Tip data</a><a id="Tip-data-1"></a><a class="docs-heading-anchor-permalink" href="#Tip-data" title="Permalink"></a></h2><pre><code class="language-julia hljs">t, rng = datedtree(28; seed=5)
+names = tipnames(t)
+p = treeplot(t; branchstyle=:round, align=true, color=:rate, colortitle=&quot;Rate&quot;, colormap=:viridis)
+for (k, i) in enumerate(someclades(t, 4))
+    highlight!(p, i; label=&quot;Group $k&quot;)
+end
+tipheatmap!(p, (; mass=Dict(n =&gt; 10rand(rng) for n in names),
+                habitat=Dict(n =&gt; rand(rng, [&quot;forest&quot;, &quot;grassland&quot;, &quot;wetland&quot;]) for n in names)))
+tipbars!(p, Dict(n =&gt; 100rand(rng) for n in names); title=&quot;Range size&quot;)
+p</code></pre><img src="cf072bde.svg" alt="Example block output"/><h2 id="Branch-styles"><a class="docs-heading-anchor" href="#Branch-styles">Branch styles</a><a id="Branch-styles-1"></a><a class="docs-heading-anchor-permalink" href="#Branch-styles" title="Permalink"></a></h2><p><code>branchstyle</code> is <code>:square</code> (default), <code>:round</code>, <code>:curved</code> or <code>:slanted</code>.</p><pre><code class="language-julia hljs">t, _ = datedtree(16; seed=2)
+treeplot(t; branchstyle=:curved)</code></pre><img src='data:image/svg+xml;utf-8,<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="332" height="283" viewBox="-17 -6 332 283" font-family="Helvetica Neue, Helvetica, Arial, sans-serif">
+<rect x="-17" y="-6" width="332" height="283" fill="%23ffffff"/>
+<g class="branches">
+<path d="M0,94.83L0.62,86.7L2.45,78.77L5.47,71.24L9.58,64.29L14.69,58.08L20.67,52.79L27.38,48.53L34.65,45.41L42.3,43.51L50.14,42.87L83.57,42.87M83.57,42.87L84.31,39.9L86.51,37.01L90.11,34.27L95.03,31.73L101.14,29.47L108.3,27.54L116.33,25.99L125.03,24.85L134.18,24.16L143.57,23.92L234.11,23.92M234.11,23.92L234.19,22.68L234.4,21.46L234.76,20.3L235.24,19.24L235.84,18.29L236.54,17.47L237.33,16.82L238.18,16.34L239.08,16.05L240,15.95L240,15.95M234.11,23.92L234.19,25.17L234.4,26.39L234.76,27.55L235.24,28.61L235.84,29.56L236.54,30.38L237.33,31.03L238.18,31.51L239.08,31.8L240,31.9L240,31.9M83.57,42.87L83.69,45.83L84.06,48.72L84.66,51.46L85.48,54L86.5,56.26L87.69,58.19L89.03,59.74L90.48,60.88L92,61.57L93.57,61.81L95.32,61.81M95.32,61.81L96.06,59.62L98.25,57.49L101.86,55.47L106.78,53.6L112.89,51.94L120.05,50.52L128.08,49.37L136.78,48.53L145.93,48.02L155.32,47.85L240,47.85M95.32,61.81L95.64,63.99L96.59,66.12L98.16,68.14L100.3,70.01L102.96,71.67L106.07,73.1L109.56,74.24L113.34,75.08L117.32,75.59L121.4,75.76L138.79,75.76M138.79,75.76L139.53,73.89L141.72,72.07L145.33,70.33L150.25,68.73L156.36,67.3L163.52,66.08L171.55,65.1L180.25,64.39L189.4,63.95L198.79,63.8L240,63.8M138.79,75.76L139.53,77.63L141.72,79.46L145.33,81.19L150.25,82.79L156.36,84.22L163.52,85.44L171.55,86.42L180.25,87.14L189.4,87.58L198.79,87.72L239.93,87.72M239.93,87.72L239.94,86.48L239.94,85.26L239.94,84.1L239.95,83.04L239.95,82.09L239.96,81.27L239.97,80.62L239.98,80.14L239.99,79.85L240,79.75L240,79.75M239.93,87.72L239.94,88.97L239.94,90.19L239.94,91.35L239.95,92.41L239.95,93.36L239.96,94.18L239.97,94.83L239.98,95.31L239.99,95.6L240,95.7L240,95.7M0,94.83L0.42,102.96L1.69,110.88L3.75,118.42L6.58,125.37L10.09,131.57L14.19,136.87L18.8,141.13L23.79,144.25L29.05,146.15L34.43,146.79L57.39,146.79M57.39,146.79L57.49,142.54L57.77,138.4L58.23,134.46L58.86,130.82L59.64,127.58L60.56,124.81L61.59,122.59L62.71,120.95L63.88,119.96L65.08,119.62L65.08,119.62M65.08,119.62L65.82,118.38L68.02,117.16L71.62,116L76.54,114.94L82.66,113.99L89.82,113.17L97.84,112.52L106.54,112.04L115.7,111.75L125.08,111.65L240,111.65M65.08,119.62L65.82,120.87L68.02,122.09L71.62,123.25L76.54,124.31L82.66,125.26L89.82,126.08L97.84,126.73L106.54,127.21L115.7,127.5L125.08,127.6L240,127.6M57.39,146.79L57.54,151.04L57.98,155.18L58.71,159.12L59.7,162.76L60.93,166L62.37,168.77L63.99,170.99L65.74,172.63L67.58,173.62L69.47,173.95L77.52,173.95M77.52,173.95L78.21,170.45L80.26,167.02L83.63,163.77L88.22,160.77L93.93,158.09L100.62,155.81L108.11,153.97L116.24,152.62L124.79,151.8L133.55,151.52L170.9,151.52M170.9,151.52L171.41,150.28L172.93,149.06L175.42,147.9L178.82,146.84L183.05,145.89L187.99,145.07L193.54,144.42L199.55,143.94L205.88,143.65L212.36,143.55L240,143.55M170.9,151.52L171.41,152.77L172.93,153.99L175.42,155.15L178.82,156.21L183.05,157.16L187.99,157.98L193.54,158.63L199.55,159.11L205.88,159.4L212.36,159.5L240,159.5M77.52,173.95L77.82,177.46L78.72,180.89L80.18,184.14L82.18,187.14L84.67,189.81L87.59,192.1L90.85,193.94L94.39,195.29L98.12,196.11L101.94,196.38L118.21,196.38M118.21,196.38L118.95,193.11L121.15,189.92L124.75,186.88L129.67,184.08L135.78,181.58L142.94,179.45L150.97,177.73L159.67,176.47L168.83,175.71L178.21,175.45L240,175.45M118.21,196.38L118.6,199.66L119.75,202.85L121.64,205.89L124.22,208.69L127.43,211.19L131.18,213.32L135.39,215.04L139.95,216.29L144.75,217.06L149.67,217.32L170.64,217.32M170.64,217.32L170.68,214.51L170.81,211.77L171.01,209.17L171.29,206.77L171.64,204.63L172.05,202.8L172.5,201.33L173,200.25L173.52,199.6L174.05,199.38L174.05,199.38M174.05,199.38L174.54,198.13L175.99,196.91L178.36,195.75L181.61,194.69L185.64,193.74L190.36,192.92L195.66,192.27L201.39,191.79L207.43,191.5L213.62,191.4L240,191.4M174.05,199.38L174.54,200.62L175.99,201.84L178.36,203L181.61,204.06L185.64,205.01L190.36,205.83L195.66,206.48L201.39,206.96L207.43,207.25L213.62,207.35L240,207.35M170.64,217.32L170.95,220.13L171.87,222.86L173.38,225.47L175.44,227.87L178.01,230.01L181.01,231.84L184.37,233.31L188.02,234.38L191.85,235.04L195.78,235.26L212.55,235.26M212.55,235.26L212.75,233.39L213.35,231.57L214.34,229.83L215.69,228.23L217.37,226.8L219.34,225.58L221.54,224.6L223.93,223.89L226.44,223.45L229.02,223.3L240,223.3M212.55,235.26L212.67,237.13L213.04,238.96L213.64,240.69L214.46,242.29L215.48,243.72L216.67,244.94L218.01,245.92L219.46,246.64L220.98,247.08L222.55,247.22L223.98,247.22M223.98,247.22L224.1,245.98L224.46,244.76L225.06,243.6L225.88,242.54L226.9,241.59L228.1,240.77L229.44,240.12L230.88,239.64L232.41,239.35L233.98,239.25L240,239.25M223.98,247.22L224.1,248.47L224.46,249.69L225.06,250.85L225.88,251.91L226.9,252.86L228.1,253.68L229.44,254.33L230.88,254.81L232.41,255.1L233.98,255.2L240,255.2" fill="none" stroke="%233a3a3a" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+<g class="tiplabels">
+<text x="244" y="15.95" dy="0.35em" font-size="11" fill="%23222222">Species 4</text>
+<text x="244" y="31.9" dy="0.35em" font-size="11" fill="%23222222">Species 16</text>
+<text x="244" y="47.85" dy="0.35em" font-size="11" fill="%23222222">Species 2</text>
+<text x="244" y="63.8" dy="0.35em" font-size="11" fill="%23222222">Species 15</text>
+<text x="244" y="79.75" dy="0.35em" font-size="11" fill="%23222222">Species 11</text>
+<text x="244" y="95.7" dy="0.35em" font-size="11" fill="%23222222">Species 13</text>
+<text x="244" y="111.65" dy="0.35em" font-size="11" fill="%23222222">Species 6</text>
+<text x="244" y="127.6" dy="0.35em" font-size="11" fill="%23222222">Species 3</text>
+<text x="244" y="143.55" dy="0.35em" font-size="11" fill="%23222222">Species 7</text>
+<text x="244" y="159.5" dy="0.35em" font-size="11" fill="%23222222">Species 5</text>
+<text x="244" y="175.45" dy="0.35em" font-size="11" fill="%23222222">Species 1</text>
+<text x="244" y="191.4" dy="0.35em" font-size="11" fill="%23222222">Species 10</text>
+<text x="244" y="207.35" dy="0.35em" font-size="11" fill="%23222222">Species 9</text>
+<text x="244" y="223.3" dy="0.35em" font-size="11" fill="%23222222">Species 12</text>
+<text x="244" y="239.25" dy="0.35em" font-size="11" fill="%23222222">Species 8</text>
+<text x="244" y="255.2" dy="0.35em" font-size="11" fill="%23222222">Species 14</text>
+</g>
+</svg>
+'/><h2 id="Direction"><a class="docs-heading-anchor" href="#Direction">Direction</a><a id="Direction-1"></a><a class="docs-heading-anchor-permalink" href="#Direction" title="Permalink"></a></h2><p><code>direction</code> is <code>:right</code> (default), <code>:left</code>, <code>:down</code> or <code>:up</code>.</p><pre><code class="language-julia hljs">t, _ = datedtree(14; seed=4)
+p = treeplot(t; direction=:down)
+timescale!(p)
+cladelabel!(p, someclades(t, 3)[1], &quot;First&quot;; color=1)
+p</code></pre><img src='data:image/svg+xml;utf-8,<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="281" height="361" viewBox="-9 -21 281 361" font-family="Helvetica Neue, Helvetica, Arial, sans-serif">
+<rect x="-9" y="-21" width="281" height="361" fill="%23ffffff"/>
+<g class="timescale">
+<path d="M7.98,200L231.27,200L231.27,160L7.98,160Z" class="background" fill="%23f3f3f3"/>
+<path d="M7.98,120L231.27,120L231.27,80L7.98,80Z" class="background" fill="%23f3f3f3"/>
+<path d="M7.98,40L231.27,40L231.27,0L7.98,0Z" class="background" fill="%23f3f3f3"/>
+<path d="M7.98,240L231.27,240M7.98,200L231.27,200M7.98,160L231.27,160M7.98,120L231.27,120M7.98,80L231.27,80M7.98,40L231.27,40M7.98,0L231.27,0" class="grid" fill="none" stroke="%23d9d9d9" stroke-width="0.7" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="4.8 3.4"/>
+<path d="M239.27,0L239.27,240M239.27,240L235.77,240M239.27,200L235.77,200M239.27,160L235.77,160M239.27,120L235.77,120M239.27,80L235.77,80M239.27,40L235.77,40M239.27,0L235.77,0" fill="none" stroke="%238a8a8a" stroke-width="0.8" stroke-linejoin="round"/>
+<text x="245.27" y="240" dy="0.35em" font-size="9.35" fill="%238a8a8a">0</text>
+<text x="245.27" y="200" dy="0.35em" font-size="9.35" fill="%238a8a8a">10</text>
+<text x="245.27" y="160" dy="0.35em" font-size="9.35" fill="%238a8a8a">20</text>
+<text x="245.27" y="120" dy="0.35em" font-size="9.35" fill="%238a8a8a">30</text>
+<text x="245.27" y="80" dy="0.35em" font-size="9.35" fill="%238a8a8a">40</text>
+<text x="245.27" y="40" dy="0.35em" font-size="9.35" fill="%238a8a8a">50</text>
+<text x="245.27" y="0" dy="0.35em" font-size="9.35" fill="%238a8a8a">60</text>
+</g>
+<g class="branches">
+<path d="M40.75,0L15.95,0L15.95,240M40.75,0L65.54,0L65.54,73.54M65.54,73.54L39.88,73.54L39.88,98.06M39.88,98.06L31.9,98.06L31.9,240M39.88,98.06L47.85,98.06L47.85,240M65.54,73.54L91.21,73.54L91.21,100.12M91.21,100.12L63.8,100.12L63.8,240M91.21,100.12L118.63,100.12L118.63,104.57M118.63,104.57L87.72,104.57L87.72,187.08M87.72,187.08L79.75,187.08L79.75,240M87.72,187.08L95.7,187.08L95.7,240M118.63,104.57L149.53,104.57L149.53,108.64M149.53,108.64L119.62,108.64L119.62,128.58M119.62,128.58L111.65,128.58L111.65,240M119.62,128.58L127.6,128.58L127.6,240M149.53,108.64L179.44,108.64L179.44,135.04M179.44,135.04L155.51,135.04L155.51,166.93M155.51,166.93L143.55,166.93L143.55,240M155.51,166.93L167.48,166.93L167.48,201.16M167.48,201.16L159.5,201.16L159.5,240M167.48,201.16L175.45,201.16L175.45,240M179.44,135.04L203.36,135.04L203.36,151.33M203.36,151.33L191.4,151.33L191.4,240M203.36,151.33L215.32,151.33L215.32,220.17M215.32,220.17L207.35,220.17L207.35,240M215.32,220.17L223.3,220.17L223.3,240" fill="none" stroke="%233a3a3a" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+<g class="tiplabels">
+<text transform="translate(15.95,244) rotate(90)" dy="0.35em" font-size="11" fill="%23222222">Species 7</text>
+<text transform="translate(31.9,244) rotate(90)" dy="0.35em" font-size="11" fill="%23222222">Species 10</text>
+<text transform="translate(47.85,244) rotate(90)" dy="0.35em" font-size="11" fill="%23222222">Species 11</text>
+<text transform="translate(63.8,244) rotate(90)" dy="0.35em" font-size="11" fill="%23222222">Species 13</text>
+<text transform="translate(79.75,244) rotate(90)" dy="0.35em" font-size="11" fill="%23222222">Species 12</text>
+<text transform="translate(95.7,244) rotate(90)" dy="0.35em" font-size="11" fill="%23222222">Species 8</text>
+<text transform="translate(111.65,244) rotate(90)" dy="0.35em" font-size="11" fill="%23222222">Species 2</text>
+<text transform="translate(127.6,244) rotate(90)" dy="0.35em" font-size="11" fill="%23222222">Species 3</text>
+<text transform="translate(143.55,244) rotate(90)" dy="0.35em" font-size="11" fill="%23222222">Species 5</text>
+<text transform="translate(159.5,244) rotate(90)" dy="0.35em" font-size="11" fill="%23222222">Species 6</text>
+<text transform="translate(175.45,244) rotate(90)" dy="0.35em" font-size="11" fill="%23222222">Species 4</text>
+<text transform="translate(191.4,244) rotate(90)" dy="0.35em" font-size="11" fill="%23222222">Species 1</text>
+<text transform="translate(207.35,244) rotate(90)" dy="0.35em" font-size="11" fill="%23222222">Species 14</text>
+<text transform="translate(223.3,244) rotate(90)" dy="0.35em" font-size="11" fill="%23222222">Species 9</text>
+</g>
+<g class="cladelabel">
+<path d="M58.22,305.92L228.88,305.92" fill="none" stroke="%234e79a7" stroke-width="3" stroke-linejoin="round"/>
+<text x="143.55" y="317.47" dy="0.35em" font-size="12.1" text-anchor="middle" font-weight="bold" fill="%2342678e">First</text>
+</g>
+</svg>
+'/><h2 id="Dendrogram"><a class="docs-heading-anchor" href="#Dendrogram">Dendrogram</a><a id="Dendrogram-1"></a><a class="docs-heading-anchor-permalink" href="#Dendrogram" title="Permalink"></a></h2><pre><code class="language-julia hljs">treeplot(t; layout=:dendrogram, cladogram=true)</code></pre><img src='data:image/svg+xml;utf-8,<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="251" height="332" viewBox="-6 -17 251 332" font-family="Helvetica Neue, Helvetica, Arial, sans-serif">
+<rect x="-6" y="-17" width="251" height="332" fill="%23ffffff"/>
+<g class="branches">
+<path d="M40.75,0L15.95,0L15.95,240M40.75,0L65.54,0L65.54,30M65.54,30L39.88,30L39.88,210M39.88,210L31.9,210L31.9,240M39.88,210L47.85,210L47.85,240M65.54,30L91.21,30L91.21,60M91.21,60L63.8,60L63.8,240M91.21,60L118.63,60L118.63,90M118.63,90L87.72,90L87.72,210M87.72,210L79.75,210L79.75,240M87.72,210L95.7,210L95.7,240M118.63,90L149.53,90L149.53,120M149.53,120L119.62,120L119.62,210M119.62,210L111.65,210L111.65,240M119.62,210L127.6,210L127.6,240M149.53,120L179.44,120L179.44,150M179.44,150L155.51,150L155.51,180M155.51,180L143.55,180L143.55,240M155.51,180L167.48,180L167.48,210M167.48,210L159.5,210L159.5,240M167.48,210L175.45,210L175.45,240M179.44,150L203.36,150L203.36,180M203.36,180L191.4,180L191.4,240M203.36,180L215.32,180L215.32,210M215.32,210L207.35,210L207.35,240M215.32,210L223.3,210L223.3,240" fill="none" stroke="%233a3a3a" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+<g class="tiplabels">
+<text transform="translate(15.95,244) rotate(90)" dy="0.35em" font-size="11" fill="%23222222">Species 7</text>
+<text transform="translate(31.9,244) rotate(90)" dy="0.35em" font-size="11" fill="%23222222">Species 10</text>
+<text transform="translate(47.85,244) rotate(90)" dy="0.35em" font-size="11" fill="%23222222">Species 11</text>
+<text transform="translate(63.8,244) rotate(90)" dy="0.35em" font-size="11" fill="%23222222">Species 13</text>
+<text transform="translate(79.75,244) rotate(90)" dy="0.35em" font-size="11" fill="%23222222">Species 12</text>
+<text transform="translate(95.7,244) rotate(90)" dy="0.35em" font-size="11" fill="%23222222">Species 8</text>
+<text transform="translate(111.65,244) rotate(90)" dy="0.35em" font-size="11" fill="%23222222">Species 2</text>
+<text transform="translate(127.6,244) rotate(90)" dy="0.35em" font-size="11" fill="%23222222">Species 3</text>
+<text transform="translate(143.55,244) rotate(90)" dy="0.35em" font-size="11" fill="%23222222">Species 5</text>
+<text transform="translate(159.5,244) rotate(90)" dy="0.35em" font-size="11" fill="%23222222">Species 6</text>
+<text transform="translate(175.45,244) rotate(90)" dy="0.35em" font-size="11" fill="%23222222">Species 4</text>
+<text transform="translate(191.4,244) rotate(90)" dy="0.35em" font-size="11" fill="%23222222">Species 1</text>
+<text transform="translate(207.35,244) rotate(90)" dy="0.35em" font-size="11" fill="%23222222">Species 14</text>
+<text transform="translate(223.3,244) rotate(90)" dy="0.35em" font-size="11" fill="%23222222">Species 9</text>
+</g>
+</svg>
+'/><h2 id="Circular-with-rings"><a class="docs-heading-anchor" href="#Circular-with-rings">Circular with rings</a><a id="Circular-with-rings-1"></a><a class="docs-heading-anchor-permalink" href="#Circular-with-rings" title="Permalink"></a></h2><pre><code class="language-julia hljs">t, rng = datedtree(70; seed=11, height=100)
+names = tipnames(t)
+cl = someclades(t, 5; minsize=5)
+p = treeplot(t; layout=:circular, openangle=20)
+timescale!(p; geo=:periods)
+highlight!(p, [&quot;Clade $k&quot; =&gt; c for (k, c) in enumerate(cl)])
+tipheatmap!(p, (; trait=Dict(n =&gt; rand(rng) for n in names),
+                diet=Dict(n =&gt; rand(rng, [&quot;herbivore&quot;, &quot;carnivore&quot;]) for n in names)))
+tipbars!(p, Dict(n =&gt; rand(rng) for n in names); color=:gray50)
+p</code></pre><img src="9e643fba.svg" alt="Example block output"/><h2 id="Fan"><a class="docs-heading-anchor" href="#Fan">Fan</a><a id="Fan-1"></a><a class="docs-heading-anchor-permalink" href="#Fan" title="Permalink"></a></h2><pre><code class="language-julia hljs">t, rng = datedtree(50; seed=8)
+p = treeplot(t; layout=:fan, branchstyle=:curved, fontsize=8)
+highlight!(p, Dict(&quot;Clade $k&quot; =&gt; c for (k, c) in enumerate(someclades(t, 4))); branches=true)
+tippoints!(p; color=Dict(n =&gt; rand(rng, [&quot;a&quot;, &quot;b&quot;, &quot;c&quot;]) for n in tipnames(t)), title=&quot;State&quot;)
+timescale!(p)
+p</code></pre><img src="e99dab3e.svg" alt="Example block output"/><h2 id="Clade-labels,-dark-theme"><a class="docs-heading-anchor" href="#Clade-labels,-dark-theme">Clade labels, dark theme</a><a id="Clade-labels,-dark-theme-1"></a><a class="docs-heading-anchor-permalink" href="#Clade-labels,-dark-theme" title="Permalink"></a></h2><pre><code class="language-julia hljs">t, _ = datedtree(60; seed=13)
+cl = someclades(t, 4)
+p = treeplot(t; layout=:circular, theme=:dark, inner=30, rootedge=10,
+             color=:rate, colormap=:magma, colortitle=&quot;Rate&quot;)
+for (k, c) in enumerate(cl)
+    cladelabel!(p, c, &quot;Clade $k&quot;; color=k)
+end
+cladelabel!(p, cl[1], &quot;Superclade&quot;; level=2, color=:gray60)
+p</code></pre><img src="0796db6f.svg" alt="Example block output"/><h2 id="Nested-highlights"><a class="docs-heading-anchor" href="#Nested-highlights">Nested highlights</a><a id="Nested-highlights-1"></a><a class="docs-heading-anchor-permalink" href="#Nested-highlights" title="Permalink"></a></h2><pre><code class="language-julia hljs">t, _ = datedtree(40; seed=21)
+cl = someclades(t, 3)
+sub = [c for i in cl for c in childnodes(t, i) if length(tips(t, c)) &gt;= 3]
+p = treeplot(t; layout=:circular)
+for (k, c) in enumerate(cl)
+    highlight!(p, c; label=&quot;Order $k&quot;, level=2, alpha=0.15)
+end
+for (k, c) in enumerate(sub)
+    highlight!(p, c; label=&quot;F$k&quot;, alpha=0.25, color=k + 4)
+end
+p</code></pre><img src="097b49ee.svg" alt="Example block output"/><h2 id="Ancestral-states"><a class="docs-heading-anchor" href="#Ancestral-states">Ancestral states</a><a id="Ancestral-states-1"></a><a class="docs-heading-anchor-permalink" href="#Ancestral-states" title="Permalink"></a></h2><pre><code class="language-julia hljs">t, rng = datedtree(24; seed=6)
+p = treeplot(t; layout=:circular)
+nodepies!(p, Dict(i =&gt; (q = rand(rng); [q, 1 - q]) for i in internalnodes(t));
+          labels=[&quot;state 0&quot;, &quot;state 1&quot;])
+p</code></pre><img src="cacb2a55.svg" alt="Example block output"/><h2 id="Large-tree"><a class="docs-heading-anchor" href="#Large-tree">Large tree</a><a id="Large-tree-1"></a><a class="docs-heading-anchor-permalink" href="#Large-tree" title="Permalink"></a></h2><pre><code class="language-julia hljs">t, _ = datedtree(400; seed=31)
+treeplot(t; layout=:circular, tiplabels=false, color=:rate)</code></pre><img src="8ecd33b0.svg" alt="Example block output"/></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../">« Home</a><a class="docs-footer-nextpage" href="../makie/">Makie »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.20.0 on <span class="colophon-date" title="Monday 16 November 2026 15:34">Monday 16 November 2026</span>. Using Julia version 1.13.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
