@@ -8,7 +8,7 @@ module PlotPhyloTreeMakieExt
 import Makie
 using Makie: (..)
 using PlotPhyloTree
-using PlotPhyloTree: TreePlot, Scene, Prim, GroupPrim, PathPrim, RectPrim, CirclePrim, TextPrim, ImagePrim,
+using PlotPhyloTree: TreePlot, Scene, Prim, GroupPrim, PathPrim, RectPrim, CirclePrim, TextPrim, ImagePrim, ArcTextPrim,
                      RGBA, Seg, isvisible, scene, foreachprim, _polylines, _dashvec, _arcpoints
 using Base64: base64decode
 import PlotPhyloTree: phyloplot, phyloplot!, phylofigure
@@ -162,6 +162,8 @@ function _draw!(plot, state, opts, p::TextPrim)
     push!(b.rotations, -deg2rad(p.angle)); push!(b.aligns, (p.halign, _VALIGN[p.valign]))
     push!(b.colors, _c(p.color))
 end
+
+_draw!(plot, state, opts, p::ArcTextPrim) = foreach(g -> _draw!(plot, state, opts, g), p.glyphs)
 
 function _loadimage(src::AbstractString)
     m = match(r"^data:image/(png|jpeg|gif)(;base64)?,(.*)$"s, src)

@@ -186,7 +186,7 @@ end
         @test occursin("\\shade[left color=", tex)                  # colour bar
         @test occursin("\\ensuremath{\\geq}", tex)                  # support legend "≥ 0.95"
         @test !occursin(r"[≥≤]", tex)
-        @test occursin(r"\\node\[anchor=mid west, inner sep=0pt", tex)
+        @test occursin(r"\\node\[anchor=base west, inner sep=0pt", tex)
         doc = tikzstring(p; standalone=true, scale=0.5)
         @test startswith(doc, "\\documentclass") && endswith(doc, "\\end{document}\n")
         @test occursin("line width=0.5bp", doc) || occursin("line width=0.", doc)
@@ -201,15 +201,69 @@ end
         typ = cetzstring(p)
         @test startswith(typ, "// PlotPhyloTree figure")
         @test occursin("#import \"@preview/cetz:$(PlotPhyloTree.CETZ_VERSION)\"", typ)
-        @test occursin("#cetz.canvas(length: 1pt, {", typ)
+        @test occursin("#context cetz.canvas(length: 1pt, {", typ)
         @test occursin("merge-path(", typ) && occursin("bezier(", typ)
         @test occursin("gradient.linear(", typ)
         @test occursin("\"Say \\\"hi\\\"\"", typ)
-        @test occursin("anchor: \"mid-west\"", typ)
+        @test occursin("anchor: \"base-west\"", typ)
+        @test occursin("top-edge: \"cap-height\", bottom-edge: \"baseline\"", typ)
         @test !occursin("#set page", typ)
         doc = cetzstring(p; standalone=true, cetz="0.3.0")
         @test occursin("#set page(width: auto, height: auto, margin: 0pt", doc)
         @test occursin("cetz:0.3.0", doc)
+    end
+
+    @testset "font metrics" begin
+        P = PlotPhyloTree
+        @test P._metricsforfont("Helvetica Neue, Helvetica, Arial, sans-serif") === :helvetica
+        @test P._metricsforfont("Latin Modern Roman") === :lmroman
+        @test P._metricsforfont("Times New Roman, serif") === :times
+        w(m; kw...) = P.withmetrics(() -> P.textwidth_px("Species 42", 10; kw...), P._metrics(m))
+        @test w(:helvetica) ≈ 49.47
+        @test w(:lmroman) < w(:helvetica) && w(:times) < w(:helvetica)
+        @test w(:lmroman; italic=true) != w(:lmroman)
+        @test P.textwidth_px("Species 42", 10) ≈ 49.47               # Helvetica outside a layout
+        @test_throws ArgumentError treeplot(t; metrics=:comic)
+        # the layout follows the metrics: narrower labels, smaller figure
+        sc_h = P.scene(treeplot(t; layout=:circular))
+        sc_lm = P.scene(treeplot(t; layout=:circular, metrics=:lmroman))
+        @test sc_lm.metrics.name == "Latin Modern Roman"
+        @test sc_lm.width < sc_h.width
+        # reading a font file, when the system has one
+        ttf = filter(isfile, ["C:/Windows/Fonts/arial.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+                              "/System/Library/Fonts/Supplemental/Arial.ttf"])
+        if !isempty(ttf)
+            m = fontmetrics(ttf[1])
+            @test m isa FontMetrics && 200 < m.regular['a'] < 800 && m.bold['a'] > m.regular['a']
+            @test treeplot(t; metrics=m).opt[:metrics] === m
+        end
+    end
+
+    @testset "curved text and document fonts" begin
+        p = treeplot(t; layout=:circular)
+        cladelabel!(p, clades(t, 2)[1], "Clade one")
+        sc = PlotPhyloTree.scene(p)
+        arcs = PlotPhyloTree.ArcTextPrim[]
+        PlotPhyloTree.foreachprim(q -> q isa PlotPhyloTree.ArcTextPrim && push!(arcs, q), sc.prims)
+        @test length(arcs) == 1 && length(arcs[1].glyphs) == 8                 # no glyph for the space
+        tex = tikzstring(p)
+        @test occursin("decoration={text along path, text align=center, text={|", tex)
+        @test occursin("|Clade one}}]", tex)
+        @test !occursin("\\sffamily", tex)                                     # the document's font
+        @test occursin("\\providecommand\\PlotPhyloTreeFont{}", tex)
+        @test occursin("\\selectfont\\PlotPhyloTreeFont\\sffamily", tikzstring(p; font="\\sffamily"))
+        glyphs = tikzstring(p; curvedtext=:glyphs)
+        @test !occursin("text along path", glyphs) && occursin("{C};", glyphs)
+        @test occursin("\\usepackage{tgheros}", tikzstring(p; standalone=true))  # matches Helvetica metrics
+        q = treeplot(t; layout=:circular, metrics=:lmroman)
+        cladelabel!(q, clades(t, 2)[1], "Clade one")
+        @test occursin("\\usepackage{lmodern}", tikzstring(q; standalone=true))
+        typ = cetzstring(p)
+        @test occursin("measure(text(..st, c))", typ) && occursin("\"Clade one\".clusters()", typ)
+        @test !occursin("#set text(font", typ)                                 # included: document font
+        @test occursin("#set text(font: (\"Latin Modern Roman\"", cetzstring(q; standalone=true))
+        @test occursin("#set text(font: (\"Fira Sans\",)", cetzstring(q; font="Fira Sans"))
+        @test !occursin("measure(", cetzstring(p; curvedtext=:glyphs))
     end
 
     @testset "saving TikZ and Typst with images" begin

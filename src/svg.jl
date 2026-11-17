@@ -153,6 +153,8 @@ function _svg!(w::SVGWriter, p::TextPrim)
     print(io, "</text>\n")
 end
 
+_svg!(w::SVGWriter, p::ArcTextPrim) = foreach(g -> _svg!(w, g), p.glyphs)
+
 function _svg!(w::SVGWriter, p::ImagePrim)
     io = w.io
     if !p.svg

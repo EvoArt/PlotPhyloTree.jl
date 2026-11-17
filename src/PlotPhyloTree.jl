@@ -29,7 +29,7 @@ export PhyloTree, nnodes, ntips, isleaf, isroot, parentnode, childnodes, branchl
 export TreePlot, treeplot, tiplabels!, notiplabels!, highlight!, cladelabel!, colorclade!, colorbranches!,
        nodepoints!, tippoints!, support!, nodelabels!, nodepies!, nodebars!, timescale!, scalebar!,
        tipheatmap!, tipbars!, tipimages!, legend!, savefig, preview, svgstring, tikzstring, cetzstring,
-       palette, colormap, phyloplot, phyloplot!, phylofigure
+       palette, colormap, phyloplot, phyloplot!, phylofigure, fontmetrics, FontMetrics
 
 include("colors.jl")
 include("text.jl")

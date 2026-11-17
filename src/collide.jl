@@ -208,6 +208,7 @@ end
 
 _addprim!(cl::Collider, p::TextPrim) = p.class in PASSIVE_CLASSES || addobstacle!(cl, _textquad(p))
 _addprim!(cl::Collider, p::ImagePrim) = addobstacle!(cl, _rectpts(p.x, p.y, p.w, p.h))
+_addprim!(cl::Collider, p::ArcTextPrim) = foreach(g -> _addprim!(cl, g), p.glyphs)
 
 """An index of everything drawn on `c` that a label must not cover."""
 function collider(c::Canvas)

@@ -80,7 +80,13 @@ path to a Newick/Nexus file.
 
 # Text and theme
 - `tiplabels = true`, `italic = false`, `align = false`, `fontsize` (auto).
-- `font = "Helvetica Neue, Helvetica, Arial, sans-serif"`.
+- `font = "Helvetica Neue, Helvetica, Arial, sans-serif"` — the font list
+  written into SVG output.
+- `metrics` — the font whose widths the layout uses to size labels: a
+  [`FontMetrics`](@ref) from [`fontmetrics`](@ref), or `:helvetica`,
+  `:lmroman`, `:lmsans` (Latin Modern: LaTeX's default) or `:times`. By
+  default it follows `font`. Match it to the document font when exporting
+  to TikZ or CeTZ, where labels are set in the document's font.
 - `theme = :light` — or `:dark`, `:minimal` (transparent background).
 - `background` — overrides the theme's background colour.
 - `title`, `subtitle`, `legend = :auto` (`:right`, `:bottom`,
@@ -94,7 +100,7 @@ function treeplot(tree::PhyloTree; layout::Symbol=:rectangular, branchstyle::Sym
                   color=nothing, linewidth=nothing, linestyle::Symbol=:solid,
                   colormap=:viridis, colorrange=nothing, palette=:default, colortitle="",
                   tiplabels::Bool=true, italic::Bool=false, align::Bool=false, fontsize=nothing,
-                  font::AbstractString="Helvetica Neue, Helvetica, Arial, sans-serif",
+                  font::AbstractString="Helvetica Neue, Helvetica, Arial, sans-serif", metrics=nothing,
                   theme::Symbol=:light, background=nothing, title=nothing, subtitle=nothing,
                   legend::Symbol=:auto, legendtitle=nothing, margin::Real=16)
     t = tree
@@ -127,6 +133,7 @@ function treeplot(tree::PhyloTree; layout::Symbol=:rectangular, branchstyle::Sym
         :rotation => Float64(rotation), :inner => Float64(inner), :rootedge => Float64(rootedge),
         :radius => radius, :width => width, :tipspacing => tipspacing,
         :fontsize => fs, :font => String(font), :theme => th,
+        :metrics => _metrics(metrics === nothing ? _metricsforfont(font) : metrics),
         :title => title, :subtitle => subtitle, :legend => legend, :legendtitle => legendtitle,
         :margin => Float64(margin), :cladogram => cladogram, :fan => layout === :fan,
         :scalebar => nothing,
@@ -297,7 +304,10 @@ mutable struct Ctx
     outer::Float64              # outer edge of all bands
 end
 
-function geometry(p::TreePlot)
+# layout reads label widths from the plot's font metrics
+geometry(p::TreePlot) = withmetrics(() -> _geometry(p), p.opt[:metrics])
+
+function _geometry(p::TreePlot)
     t = p.tree
     n = ntips(t)
     o = p.opt
@@ -373,7 +383,9 @@ band(ctx::Ctx, l::Layer) = ctx.bands[bandkey(l)]
 
 Lay out `p` and record everything it draws; the backends translate the result.
 """
-function scene(p::TreePlot)
+scene(p::TreePlot) = withmetrics(() -> _scene(p), p.opt[:metrics])
+
+function _scene(p::TreePlot)
     ctx = geometry(p)
     c = Canvas()
     layers = sort(p.layers; by=l -> (zorder(l), suborder(l, p)))   # stable within a level
@@ -394,7 +406,7 @@ function scene(p::TreePlot)
     isempty_bbox(b) && (b = BBox(0, 0, 1, 1))
     x0 = floor(b.xmin - m); y0 = floor(b.ymin - m)
     W = ceil(b.xmax + m - x0); H = ceil(b.ymax + m - y0)
-    return Scene(c.prims, x0, y0, W, H, tocolor(ctx.th[:bg]), p.opt[:font])
+    return Scene(c.prims, x0, y0, W, H, tocolor(ctx.th[:bg]), p.opt[:font], p.opt[:metrics])
 end
 
 """

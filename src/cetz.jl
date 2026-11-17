@@ -9,6 +9,7 @@ mutable struct CeTZWriter
     imagedir::Union{Nothing,String}
     imageprefix::String
     nimages::Int
+    measure::Bool                      # curved text measured by Typst (else the layout's glyphs)
 end
 
 _cz(w::CeTZWriter, x, y) = string('(', _num(w.s * x), ", ", _num(-w.s * y), ')')
@@ -113,29 +114,62 @@ function _cetz!(w::CeTZWriter, p::CirclePrim)
     print(w.io, "  circle(", _cz(w, p.x, p.y), ", radius: ", _num(w.s * p.r), ", fill: ", fill, ", stroke: ", stroke, ")\n")
 end
 
-function _cetzanchor(h::Symbol, v::Symbol)
-    vv = v === :center ? "mid" : v === :baseline ? "base" : v === :top ? "north" : "south"
-    h === :center && return vv
-    return string(vv, '-', h === :left ? "west" : "east")
+# text is anchored on its baseline at the point the SVG puts it (see _baseline);
+# CeTZ's "mid" anchors depend on each string's ink and vary between versions
+_cetzanchor(h::Symbol) = h === :center ? "base" : h === :left ? "base-west" : "base-east"
+
+# Fixed box edges (cap height to baseline) make every string's box bottom its
+# baseline, so CeTZ's "base" anchors land on the baseline whatever the glyphs
+# (CeTZ otherwise measures each string's own ink, differently by version).
+function _textargs(w::CeTZWriter, fontsize, bold, italic, family=nothing)
+    targs = "size: " * _cpt(w, fontsize) * ", top-edge: \"cap-height\", bottom-edge: \"baseline\""
+    bold && (targs *= ", weight: \"bold\"")
+    italic && (targs *= ", style: \"italic\"")
+    if family !== nothing
+        fl = _fontlist(family)
+        isempty(fl) || (targs *= ", font: (" * Base.join(_typstr.(fl), ", ") * ",)")
+    end
+    return targs
 end
 
 function _cetz!(w::CeTZWriter, p::TextPrim)
-    targs = "size: " * _cpt(w, p.fontsize)
-    p.bold && (targs *= ", weight: \"bold\"")
-    p.italic && (targs *= ", style: \"italic\"")
-    if p.family !== nothing
-        fl = _fontlist(p.family)
-        isempty(fl) || (targs *= ", font: (" * Base.join(_typstr.(fl), ", ") * ",)")
-    end
+    targs = _textargs(w, p.fontsize, p.bold, p.italic, p.family)
     s = _typstr(p.text)
-    pos = _cz(w, p.x, p.y)
-    tail = ", anchor: \"" * _cetzanchor(p.halign, p.valign) * "\", padding: 0" *
+    pos = _cz(w, _baseline(p)...)
+    tail = ", anchor: \"" * _cetzanchor(p.halign) * "\", padding: 0" *
            (p.angle == 0 ? "" : ", angle: " * _num(-p.angle) * "deg") * ")\n"
     if isvisible(p.halo) && p.halowidth > 0
         print(w.io, "  content(", pos, ", text(", targs, ", fill: ", _typcolor(p.halo), ", stroke: (paint: ",
               _typcolor(p.halo), ", thickness: ", _cpt(w, p.halowidth), ", join: \"round\"), ", s, ")", tail)
     end
     print(w.io, "  content(", pos, ", text(", targs, ", fill: ", _typcolor(p.color), ", ", s, ")", tail)
+end
+
+# Curved text: Typst measures each character in the document's font and the
+# letters are laid along the arc from those widths (the canvas runs in a
+# `context`, so `measure` sees the document's text settings).
+function _cetz!(w::CeTZWriter, p::ArcTextPrim)
+    if !w.measure
+        foreach(g -> _cetz!(w, g), p.glyphs)
+        return
+    end
+    s = w.s
+    rb = s * (p.r - (p.clockwise ? 1 : -1) * 0.35 * p.fontsize)     # baseline radius
+    dir = p.clockwise ? -1 : 1                                        # Typst angles run anticlockwise
+    rot = p.clockwise ? "-90deg" : "90deg"
+    st = _textargs(w, p.fontsize, p.bold, p.italic) * ", fill: " * _typcolor(p.color)
+    io = w.io
+    print(io, "  {\n    let st = (", st, ")\n",
+          "    let cs = ", _typstr(p.text), ".clusters()\n",
+          "    let sp = (measure(text(..st, \"x x\")).width - measure(text(..st, \"xx\")).width) / 1pt\n",
+          "    let ws = cs.map(c => if c == \" \" { sp } else { measure(text(..st, c)).width / 1pt })\n",
+          "    let (cx, cy, rb, dir) = (", _num(s * p.cx), ", ", _num(-s * p.cy), ", ", _num(rb), ", ", dir, ")\n",
+          "    let a = ", _num(-rad2deg(p.φ)), "deg - dir * ws.sum() / (2 * rb) * 1rad\n",
+          "    for (c, cw) in cs.zip(ws) {\n",
+          "      let m = a + dir * cw / (2 * rb) * 1rad\n",
+          "      if c != \" \" { content((cx + rb * calc.cos(m), cy + rb * calc.sin(m)), text(..st, c), ",
+          "anchor: \"base\", padding: 0, angle: m + ", rot, ") }\n",
+          "      a += dir * cw / rb * 1rad\n    }\n  }\n")
 end
 
 function _cetz!(w::CeTZWriter, p::ImagePrim)
@@ -148,19 +182,38 @@ end
 
 const CETZ_VERSION = "0.4.2"
 
+# fonts for a standalone document, matching the layout metrics
+function _typstfonts(m::FontMetrics)
+    n = m.name
+    n == "Helvetica" && return ["Helvetica", "Arial", "TeX Gyre Heros", "Liberation Sans"]
+    n == "Latin Modern Roman" && return ["Latin Modern Roman", "New Computer Modern"]
+    n == "Latin Modern Sans" && return ["Latin Modern Sans", "New Computer Modern Sans"]
+    n == "Times" && return ["Times New Roman", "TeX Gyre Termes", "Liberation Serif"]
+    return [n]
+end
+
 """
-    cetzstring(p; standalone=false, scale=1, cetz="$CETZ_VERSION", font=nothing) -> String
+    cetzstring(p; standalone=false, scale=1, cetz="$CETZ_VERSION", font=nothing,
+               curvedtext=:native) -> String
 
 The figure as Typst code drawing it with [CeTZ](https://typst.app/universe/package/cetz).
 The code imports `@preview/cetz:<cetz>` and draws a `cetz.canvas`; `#include`
 the saved file in a Typst document, or with `standalone = true` it sets the
 page to fit the figure so it compiles on its own (`typst compile tree.typ`).
 
-One px of the layout becomes one pt; `scale` multiplies every length,
-including font sizes and line widths. `font` is a Typst font name or list
-(default: the figure's `font` option, falling back to Typst's default). Pick
-`cetz` to match your Typst version (CeTZ 0.3.0 needs Typst ≥ 0.11, 0.4 needs
-0.13.1, 0.5 needs 0.14).
+Geometry is fixed by the layout (1 px = 1 pt; `scale` multiplies every
+length, font sizes included). Text is handed to Typst: labels use the
+**document's font** — whatever `#set text(font: …)` is in force where the
+file is included — at the layout's sizes. `font` (a name or list) sets a
+font for this figure instead; a standalone document picks one matching the
+layout metrics. Lay the tree out with the metrics of the document font
+(`treeplot(…; metrics=…)`, see [`fontmetrics`](@ref)) so label bands and the
+legend fit. Curved clade labels are spaced by Typst, which measures each
+letter in the document font (`curvedtext = :glyphs` places the letters as the
+layout did instead).
+
+Pick `cetz` to match your Typst version (CeTZ 0.3.0 needs Typst ≥ 0.11, 0.4
+needs 0.13.1, 0.5 needs 0.14).
 
 Images are written beside the file by [`savefig`](@ref) (`"tree.typ"` →
 `tree-img-1.png` …); Typst draws SVG images itself.
@@ -168,13 +221,16 @@ Images are written beside the file by [`savefig`](@ref) (`"tree.typ"` →
 cetzstring(p::TreePlot; kwargs...) = cetzdocument(scene(p); kwargs...)
 
 function cetzdocument(sc::Scene; standalone::Bool=false, scale::Real=1, cetz::AbstractString=CETZ_VERSION,
-                      font=nothing, imagedir=nothing, imageprefix::AbstractString="img")
+                      font=nothing, curvedtext::Symbol=:native, imagedir=nothing,
+                      imageprefix::AbstractString="img")
+    curvedtext in (:native, :glyphs) || throw(ArgumentError("curvedtext must be :native or :glyphs"))
     w = CeTZWriter(IOBuffer(), Float64(scale), imagedir === nothing ? nothing : String(imagedir),
-                   String(imageprefix), 0)
+                   String(imageprefix), 0, curvedtext === :native)
     for p in sc.prims
         _cetz!(w, p)
     end
-    fonts = font === nothing ? _fontlist(sc.font) : font isa AbstractString ? [String(font)] : String.(collect(font))
+    fonts = font !== nothing ? (font isa AbstractString ? [String(font)] : String.(collect(font))) :
+            standalone ? _typstfonts(sc.metrics) : String[]
     io = IOBuffer()
     print(io, "// PlotPhyloTree figure: ", _num(w.s * sc.width), " x ", _num(w.s * sc.height), " pt\n")
     print(io, "#import \"@preview/cetz:", cetz, "\"\n")
@@ -183,7 +239,7 @@ function cetzdocument(sc::Scene; standalone::Bool=false, scale::Real=1, cetz::Ab
                         isvisible(bg) ? ", fill: " * _typcolor(bg) : "", ")\n")
     print(io, "#[\n")
     isempty(fonts) || print(io, "#set text(font: (", Base.join(_typstr.(fonts), ", "), ",), fallback: true)\n")
-    print(io, "#cetz.canvas(length: 1pt, {\n  import cetz.draw: *\n")
+    print(io, "#context cetz.canvas(length: 1pt, {\n  import cetz.draw: *\n")
     # fix the canvas to the figure's area (and paint the background)
     print(io, "  rect(", _cz(w, sc.x0, sc.y0), ", ", _cz(w, sc.x0 + sc.width, sc.y0 + sc.height), ", stroke: none, fill: ",
           isvisible(bg) ? _typcolor(bg) : "none", ")\n")

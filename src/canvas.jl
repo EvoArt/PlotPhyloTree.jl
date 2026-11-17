@@ -319,18 +319,82 @@ function text!(c::Canvas, x, y, s::AbstractString; fontsize=10.0, angle=0.0, hal
                color=:black, bold=false, italic=false, family=nothing, halo=nothing, halowidth=3.0,
                class="")
     isempty(s) && return
-    _push!(c, TextPrim(x, y, String(s), fontsize, angle, halign, valign, tocolor(color), bold, italic,
-                       family === nothing ? nothing : String(family), tocolor(halo), halowidth, String(class)))
-    # bounding box of the rotated text box
-    w = textwidth_px(s, fontsize; bold)
-    x0 = halign === :left ? 0.0 : halign === :center ? -w / 2 : -w
-    h = fontsize
-    yc = valign === :center ? 0.0 : valign === :top ? h / 2 : valign === :bottom ? -h / 2 : -0.3h
-    a = deg2rad(angle)
+    p = TextPrim(x, y, String(s), fontsize, angle, halign, valign, tocolor(color), bold, italic,
+                 family === nothing ? nothing : String(family), tocolor(halo), halowidth, String(class))
+    _push!(c, p)
+    _growtext!(c.bbox, p)
+end
+
+# The point on the text's baseline that backends anchor to: the SVG writer
+# shifts text by `dy` (in em) from its anchor, along the text's own down
+# direction, so other backends anchor at the baseline point found here.
+_valigndy(v::Symbol) = v === :center ? 0.35 : v === :top ? 0.75 : v === :bottom ? -0.22 : 0.0
+
+function _baseline(p::TextPrim)
+    dy = _valigndy(p.valign) * p.fontsize
+    θ = deg2rad(p.angle)
+    return (p.x - dy * sin(θ), p.y + dy * cos(θ))
+end
+
+# bounding box of the rotated text box
+function _growtext!(bb::BBox, p::TextPrim)
+    w = textwidth_px(p.text, p.fontsize; bold=p.bold, italic=p.italic)
+    x0 = p.halign === :left ? 0.0 : p.halign === :center ? -w / 2 : -w
+    h = p.fontsize
+    v = p.valign
+    yc = v === :center ? 0.0 : v === :top ? h / 2 : v === :bottom ? -h / 2 : -0.3h
+    a = deg2rad(p.angle)
     ca, sa = cos(a), sin(a)
     for (px, py) in ((x0, yc - h / 2), (x0 + w, yc - h / 2), (x0, yc + h / 2), (x0 + w, yc + h / 2))
-        grow!(c.bbox, x + px * ca - py * sa, y + px * sa + py * ca)
+        grow!(bb, p.x + px * ca - py * sa, p.y + px * sa + py * ca)
     end
+end
+
+"""
+Text set along a circle around (cx, cy), centred at angle `φ` (radians,
+clockwise) with its middle on radius `r`. In the upper half it reads
+clockwise, in the lower half anticlockwise, so it is never upside down.
+`glyphs` places each character with the layout's metrics (used by SVG and
+Makie); TikZ and CeTZ set the whole string along the arc in the document's
+font instead.
+"""
+struct ArcTextPrim <: Prim
+    cx::Float64
+    cy::Float64
+    r::Float64
+    φ::Float64
+    clockwise::Bool
+    text::String
+    fontsize::Float64
+    color::RGBA
+    bold::Bool
+    italic::Bool
+    halo::RGBA
+    halowidth::Float64
+    glyphs::Vector{TextPrim}
+end
+
+function arctext!(c::Canvas, cx, cy, r, φm, s::AbstractString; fontsize=10.0, color=:black, bold=false,
+                  italic=false, halo=nothing, halowidth=3.0)
+    isempty(s) && return
+    col = tocolor(color); hal = tocolor(halo)
+    W = textwidth_px(s, fontsize; bold, italic)
+    top = sin(φm) <= 0.05           # upper half reads clockwise
+    dir = top ? 1.0 : -1.0
+    φ = φm - dir * W / (2r)
+    glyphs = TextPrim[]
+    for ch in s
+        w = charwidth_px(ch, fontsize; bold, italic)
+        a = φ + dir * (w / 2) / r
+        if ch != ' '
+            rot = rad2deg(a) + (top ? 90 : -90)
+            push!(glyphs, TextPrim(cx + r * cos(a), cy + r * sin(a), string(ch), fontsize, rot, :center, :center,
+                                   col, bold, italic, nothing, hal, halowidth, ""))
+        end
+        φ += dir * w / r
+    end
+    _push!(c, ArcTextPrim(cx, cy, r, φm, top, String(s), fontsize, col, bold, italic, hal, halowidth, glyphs))
+    foreach(g -> _growtext!(c.bbox, g), glyphs)
 end
 
 # --- images ----------------------------------------------------------------------------
@@ -365,6 +429,7 @@ struct Scene
     height::Float64
     background::RGBA
     font::String
+    metrics::FontMetrics        # widths the layout assumed
 end
 
 # flattened arc: points from a1 to a2 (excluding the start), roughly every 4° and ≤ 3 px apart

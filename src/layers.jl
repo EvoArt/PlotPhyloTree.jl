@@ -92,7 +92,7 @@ function bandwidth(l::TipLabels, ctx::Ctx, start)
     fs = _fs(l, ctx)
     e = start
     for i in tips(ctx.p.tree)
-        e = max(e, _labelstart(l, ctx, i, start) + textwidth_px(l.text[i], fs; bold=l.bold))
+        e = max(e, _labelstart(l, ctx, i, start) + textwidth_px(l.text[i], fs; bold=l.bold, italic=l.italic))
     end
     return e - start
 end
@@ -377,21 +377,7 @@ end
 # glyph-by-glyph text along a circle, centred on `pos`, reading left to right
 function _arctext!(c::Canvas, co::Polar, r, pos, s::AbstractString; fontsize, color, bold=false,
                    italic=false, halo=nothing)
-    φm = angle(co, pos)
-    W = textwidth_px(s, fontsize; bold)
-    top = sin(φm) <= 0.05           # upper half reads clockwise
-    dir = top ? 1.0 : -1.0
-    φ = φm - dir * W / (2r)
-    for ch in s
-        w = charwidth_px(ch, fontsize; bold)
-        a = φ + dir * (w / 2) / r
-        if ch != ' '
-            rot = rad2deg(a) + (top ? 90 : -90)
-            text!(c, r * cos(a), r * sin(a), string(ch); fontsize, angle=rot, halign=:center, color, bold,
-                  italic, halo)
-        end
-        φ += dir * w / r
-    end
+    arctext!(c, 0.0, 0.0, r, angle(co, pos), s; fontsize, color, bold, italic, halo)
 end
 
 # =========================================================================================

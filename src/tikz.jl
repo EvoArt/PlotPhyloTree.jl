@@ -55,8 +55,7 @@ function _fontlist(font::AbstractString)
     fams = [strip(strip(f), ['"', '\'']) for f in split(font, ',')]
     return [String(f) for f in fams if !isempty(f) && !(lowercase(f) in ("sans-serif", "serif", "monospace", "cursive", "fantasy", "system-ui"))]
 end
-_generic(font::AbstractString) = (f = lowercase(font); occursin("monospace", f) ? :mono :
-                                  occursin("sans", f) ? :sans : occursin("serif", f) ? :serif : :sans)
+
 
 # --- TikZ -----------------------------------------------------------------------------
 
@@ -65,7 +64,8 @@ mutable struct TikZWriter
     s::Float64                         # scale
     colors::Dict{UInt32,String}
     colordefs::IOBuffer
-    family::String                     # \sffamily etc.
+    family::String                     # font code added to every label ("" = document font)
+    curved::Symbol                     # :native (text along path) or :glyphs
     imagedir::Union{Nothing,String}
     imageprefix::String
     nimages::Int
@@ -196,19 +196,20 @@ function _tikz!(w::TikZWriter, p::CirclePrim)
     _tikzcmd(w, opts, string(_xy(w, p.x, p.y), " circle[radius=", _pt(w, p.r), "]"))
 end
 
-function _tikzanchor(h::Symbol, v::Symbol)
-    vv = v === :center ? "mid" : v === :baseline ? "base" : v === :top ? "north" : "south"
-    h === :center && return vv
-    return string(vv, ' ', h === :left ? "west" : "east")
-end
+# text is anchored on its baseline at the point the SVG puts it (see _baseline)
+_tikzanchor(h::Symbol) = h === :center ? "base" : h === :left ? "base west" : "base east"
+
+_tikzfont(w::TikZWriter, fs, bold, italic) =
+    string("\\fontsize{", _num(fs), "}{", _num(1.2fs), "}\\selectfont\\PlotPhyloTreeFont", w.family,
+           bold ? "\\bfseries" : "", italic ? "\\itshape" : "")
 
 function _tikz!(w::TikZWriter, p::TextPrim)
     fs = w.s * p.fontsize
-    font = string("\\fontsize{", _num(fs), "}{", _num(1.2fs), "}\\selectfont", w.family,
-                  p.bold ? "\\bfseries" : "", p.italic ? "\\itshape" : "")
-    base = ["anchor=" * _tikzanchor(p.halign, p.valign), "inner sep=0pt", "outer sep=0pt", "font=" * font]
+    font = _tikzfont(w, fs, p.bold, p.italic)
+    base = ["anchor=" * _tikzanchor(p.halign), "inner sep=0pt", "outer sep=0pt", "font=" * font]
     p.angle == 0 || push!(base, "rotate=" * _num(-p.angle))
     txt = _tikzesc(p.text)
+    x, y = _baseline(p)
     if isvisible(p.halo) && p.halowidth > 0
         # a halo: the text drawn in the halo colour, nudged in 8 directions, underneath
         r = p.halowidth / 2
@@ -216,12 +217,35 @@ function _tikz!(w::TikZWriter, p::TextPrim)
         for k in 0:7
             a = k * π / 4
             print(w.io, "\\node[", Base.join(base, ", "), ", text=", hc, "] at ",
-                  _xy(w, p.x + r * cos(a), p.y + r * sin(a)), " {", txt, "};\n")
+                  _xy(w, x + r * cos(a), y + r * sin(a)), " {", txt, "};\n")
         end
     end
     opts = push!(copy(base), "text=" * _tcolor(w, p.color))
     p.color.a < 1 && push!(opts, "text opacity=" * _num(p.color.a))
-    print(w.io, "\\node[", Base.join(opts, ", "), "] at ", _xy(w, p.x, p.y), " {", txt, "};\n")
+    print(w.io, "\\node[", Base.join(opts, ", "), "] at ", _xy(w, x, y), " {", txt, "};\n")
+end
+
+# Curved text along its arc with TikZ's `text along path` decoration, so the
+# document font's own widths space the letters. Falls back to the layout's
+# per-glyph placement for text TikZ cannot decorate (macros, halos).
+function _tikz!(w::TikZWriter, p::ArcTextPrim)
+    txt = _tikzesc(p.text)
+    if w.curved !== :native || txt != p.text || isvisible(p.halo) || occursin('|', p.text)
+        foreach(g -> _tikz!(w, g), p.glyphs)
+        return
+    end
+    # baseline radius: the text is centred (vertically) on r; glyphs face outwards in
+    # the upper half (reading clockwise) and inwards in the lower half
+    rb = p.r - (p.clockwise ? 1 : -1) * 0.35 * p.fontsize
+    W = textwidth_px(p.text, p.fontsize; p.bold, p.italic)
+    span = clamp(1.6 * W / (2rb) + 0.15, 0.1, 0.95π)            # half-angle of the path, generous
+    a1, a2 = p.clockwise ? (p.φ - span, p.φ + span) : (p.φ + span, p.φ - span)
+    font = _tikzfont(w, w.s * p.fontsize, p.bold, p.italic)
+    col = _tcolor(w, p.color)
+    alpha = p.color.a < 1 ? "\\pgfsetfillopacity{" * _num(p.color.a) * "}" : ""
+    print(w.io, "\\path[decorate, decoration={text along path, text align=center, text={|", font, "\\color{", col,
+          "}", alpha, "|", txt, "}}] ", _xy(w, p.cx + rb * cos(a1), p.cy + rb * sin(a1)),
+          " arc[start angle=", _num(-rad2deg(a1)), ", end angle=", _num(-rad2deg(a2)), ", radius=", _pt(w, rb), "];\n")
 end
 
 function _tikz!(w::TikZWriter, p::ImagePrim)
@@ -234,30 +258,51 @@ function _tikz!(w::TikZWriter, p::ImagePrim)
 end
 
 """
-    tikzstring(p; standalone=false, scale=1, font=nothing) -> String
+    tikzstring(p; standalone=false, scale=1, font="", curvedtext=:native) -> String
 
-The figure as TikZ code: a `tikzpicture` environment to `\\input` into a
-LaTeX document (needs `\\usepackage{tikz}`), or with `standalone = true` a
-complete document that compiles on its own (`pdflatex`, `lualatex`).
+The figure as TikZ code: a `tikzpicture` to `\\input` into a LaTeX document,
+or with `standalone = true` a complete document that compiles on its own.
 
-One px of the layout becomes one bp (1/72 in), and `scale` multiplies every
-length, including font sizes and line widths — use it to fit a column
-(`\\resizebox` works too). Labels are set in the document's font at the
-layout's sizes: `font` is LaTeX font code added to every label (e.g.
-`"\\\\sffamily"`); by default the figure's `font` option picks `\\sffamily`,
-`\\rmfamily` or `\\ttfamily`.
+Geometry (branches, wedges, rings, symbols) is fixed by the layout, in bp
+(1 px = 1 bp; `scale` multiplies every length, font sizes included). Text is
+handed to LaTeX: labels are typeset in the **document's font** at the
+layout's sizes, so changing the document font changes the tree's labels.
+Ways to pick the font, from widest to narrowest scope:
 
+- the picture uses the font current where it is `\\input` (e.g. wrap it in
+  `{\\sffamily …}`);
+- every label starts with `\\PlotPhyloTreeFont` (empty unless you define it,
+  e.g. `\\newcommand\\PlotPhyloTreeFont{\\sffamily}` in the preamble);
+- `font` adds LaTeX font code to this figure's labels.
+
+Lay the tree out with the metrics of that font (`treeplot(…; metrics=:lmroman)`
+for LaTeX's default, or [`fontmetrics`](@ref) for any font file) so label
+bands and the legend fit the text LaTeX sets. Curved clade labels use TikZ's
+`text along path`, spaced with the document font's own widths;
+`curvedtext = :glyphs` places each letter where the layout put it instead.
+
+Needs `\\usepackage{tikz}` and `\\usetikzlibrary{decorations.text}` (the
+standalone document loads both, plus a font matching the layout metrics).
 Images are written beside the file by [`savefig`](@ref) (`"tree.tex"` →
 `tree-img-1.png` …); SVG images are converted to PDF, which needs the
 Librsvg extension.
 """
 tikzstring(p::TreePlot; kwargs...) = tikzdocument(scene(p); kwargs...)
 
-function tikzdocument(sc::Scene; standalone::Bool=false, scale::Real=1, font=nothing,
-                      imagedir=nothing, imageprefix::AbstractString="img")
-    fam = font !== nothing ? String(font) :
-          (g = _generic(sc.font); g === :sans ? "\\sffamily" : g === :mono ? "\\ttfamily" : "\\rmfamily")
-    w = TikZWriter(IOBuffer(), Float64(scale), Dict{UInt32,String}(), IOBuffer(), fam,
+# preamble lines loading a font that matches the layout metrics (pdfLaTeX)
+function _tikzfontpreamble(m::FontMetrics)
+    n = m.name
+    n == "Helvetica" && return "\\usepackage{tgheros}\n\\renewcommand{\\familydefault}{\\sfdefault}\n"
+    n == "Latin Modern Sans" && return "\\usepackage{lmodern}\n\\renewcommand{\\familydefault}{\\sfdefault}\n"
+    n == "Latin Modern Roman" && return "\\usepackage{lmodern}\n"
+    n == "Times" && return "\\usepackage{tgtermes}\n"
+    return "\\usepackage{lmodern}\n% labels were laid out for $n: load it here (e.g. fontspec + lualatex)\n"
+end
+
+function tikzdocument(sc::Scene; standalone::Bool=false, scale::Real=1, font::AbstractString="",
+                      curvedtext::Symbol=:native, imagedir=nothing, imageprefix::AbstractString="img")
+    curvedtext in (:native, :glyphs) || throw(ArgumentError("curvedtext must be :native or :glyphs"))
+    w = TikZWriter(IOBuffer(), Float64(scale), Dict{UInt32,String}(), IOBuffer(), String(font), curvedtext,
                    imagedir === nothing ? nothing : String(imagedir), String(imageprefix), 0)
     for p in sc.prims
         _tikz!(w, p)
@@ -265,11 +310,14 @@ function tikzdocument(sc::Scene; standalone::Bool=false, scale::Real=1, font=not
     body = String(take!(w.io))
     io = IOBuffer()
     if standalone
-        print(io, "\\documentclass[tikz, border=0pt]{standalone}\n",
-              "\\usepackage[T1]{fontenc}\n\\usepackage{lmodern}\n\\usepackage{graphicx}\n",
+        print(io, "\\documentclass[tikz, border=0pt]{standalone}\n\\usepackage[T1]{fontenc}\n",
+              _tikzfontpreamble(sc.metrics), "\\usepackage{graphicx}\n\\usetikzlibrary{decorations.text}\n",
               "\\begin{document}\n")
     end
-    print(io, "% PlotPhyloTree figure: ", _num(w.s * sc.width), " x ", _num(w.s * sc.height), " bp\n")
+    print(io, "% PlotPhyloTree figure: ", _num(w.s * sc.width), " x ", _num(w.s * sc.height),
+          " bp; labels laid out for ", sc.metrics.name, "\n",
+          "% needs \\usepackage{tikz} and \\usetikzlibrary{decorations.text}\n",
+          "\\providecommand\\PlotPhyloTreeFont{}\n")
     print(io, "\\begin{tikzpicture}[x=1bp, y=1bp]\n")
     print(io, String(take!(w.colordefs)))
     bg = sc.background
