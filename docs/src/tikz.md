@@ -3,6 +3,10 @@
 Saving to `.tikz` writes a `tikzpicture` to `\input` into a LaTeX document.
 Saving to `.tex` writes a standalone document instead.
 
+!!! warning "Work in progress"
+    Rotated tip labels and curved clade labels can come out at the wrong
+    angle or spacing. Check them in your output.
+
 ```julia
 using PlotPhyloTree, Random
 tree = randtree(30; rng=Xoshiro(1), labels=["Species_$i" for i in 1:30])

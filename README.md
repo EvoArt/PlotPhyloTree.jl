@@ -9,6 +9,9 @@ clade highlights and labels, support values, node pies, age bars, time scales,
 heatmap and bar rings, images and legends. Output to SVG, PNG, PDF, TikZ and
 CeTZ (Typst), or into a Makie figure.
 
+> **Work in progress:** in TikZ and CeTZ output, rotated labels and curved
+> clade labels can come out at the wrong angle or spacing.
+
 ```julia
 using Pkg; Pkg.add("PlotPhyloTree")
 ```

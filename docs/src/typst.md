@@ -4,6 +4,11 @@ Saving to `.typ` with `standalone=false` writes Typst code that draws the figure
 with [CeTZ](https://typst.app/universe/package/cetz), to `#include` in a Typst
 document. Without `standalone=false` the file compiles on its own.
 
+!!! warning "Work in progress"
+    Rotated tip labels and curved clade labels can come out at the wrong
+    angle or spacing, depending on the CeTZ version. Check them in your
+    output.
+
 ```julia
 using PlotPhyloTree, Random
 tree = randtree(30; rng=Xoshiro(1), labels=["Species_$i" for i in 1:30])
