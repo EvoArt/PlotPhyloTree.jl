@@ -45,7 +45,7 @@ const Pt = Tuple{Float64,Float64}
 
 # corners of the rotated box a text primitive covers, grown by `pad` px
 function _textquad(t::TextPrim, pad::Real=0.0)
-    w = textwidth_px(t.text, t.fontsize; bold=t.bold)
+    w = textwidth_px(t.text, t.fontsize; bold=t.bold, italic=t.italic)
     h = t.fontsize
     x0 = t.halign === :left ? 0.0 : t.halign === :center ? -w / 2 : -w
     yc = t.valign === :center ? 0.0 : t.valign === :top ? h / 2 : t.valign === :bottom ? -h / 2 : -0.3h
