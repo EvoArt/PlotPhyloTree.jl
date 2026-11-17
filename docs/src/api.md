@@ -56,6 +56,13 @@ phyloplot
 phylofigure
 ```
 
+## Fonts
+
+```@docs
+FontMetrics
+fontmetrics
+```
+
 ## Colours
 
 ```@docs
