@@ -1,7 +1,6 @@
 [deps]
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
-PhyloIO = "2031dd8a-3ee5-4b40-a1c7-31da38b3f347"
 PlotPhyloTree = "13412a18-f2a1-4ce8-a2da-bce8c134a8fd"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 
@@ -10,5 +9,4 @@ CairoMakie = "0.12, 0.13, 0.14, 0.15"
 Documenter = "1"
 
 [sources]
-PhyloIO = {url = "https://github.com/EvoArt/PhyloIO.jl", rev = "main"}
 PlotPhyloTree = {path = ".."}

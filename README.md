@@ -29,5 +29,7 @@ savefig("tree.svg", p)
 
 <p align="center"><img src="docs/src/assets/readme.png" width="560"></p>
 
-Trees are read with [PhyloIO.jl](https://github.com/EvoArt/PhyloIO.jl)
-(`readnewick`, `readnexus`), re-exported by this package.
+This release bundles the [PhylogenyIO.jl](https://github.com/EvoArt/PhylogenyIO.jl)
+tree implementation and re-exports `readnewick` and `readnexus`. Tree types in
+`PhyloBuilder` and `PlotPhyloTree` are temporarily distinct; pass a Newick
+string or file between them.

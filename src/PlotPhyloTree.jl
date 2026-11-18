@@ -17,10 +17,11 @@ savefig("tree.svg", p)
 module PlotPhyloTree
 
 using Base64: base64encode, base64decode
-using PhyloIO
-using PhyloIO: PhyloTree
+include("phylogenyio/PhylogenyIO.jl")
+using .PhylogenyIO
+using .PhylogenyIO: PhyloTree
 
-# re-export the tree API so `using PlotPhyloTree` is enough
+# re-export the temporarily bundled tree API so `using PlotPhyloTree` is enough
 export PhyloTree, nnodes, ntips, isleaf, isroot, parentnode, childnodes, branchlength, nodelabel, rootnode,
        getdata, setdata!, preorder, postorder, tips, tipnames, internalnodes, descendants, ancestors,
        findnode, mrca, nodeindex, rootdistance, treeheight, ladderize!, rotatenode!, sorttips!, keeptips,

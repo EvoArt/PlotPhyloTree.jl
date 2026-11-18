@@ -6,8 +6,9 @@ heatmap and bar rings, images, legends), then write it as SVG, PNG, PDF, TikZ or
 CeTZ (Typst), or draw it into a Makie figure.
 
 Layouts: rectangular (any direction), slanted, dendrogram, circular and fan.
-Trees are read and manipulated with [PhyloIO.jl](https://github.com/EvoArt/PhyloIO.jl),
-whose API is re-exported.
+This release bundles the [PhylogenyIO.jl](https://github.com/EvoArt/PhylogenyIO.jl)
+tree implementation and re-exports its API. `PhyloBuilder` currently bundles
+its own copy, so transfer trees between the packages as Newick strings or files.
 
 ## Installation
 
