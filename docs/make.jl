@@ -12,7 +12,8 @@ makedocs(
         "CeTZ / Typst" => "typst.md",
         "API" => "api.md",
     ],
-    checkdocs = :exports,
+    # The temporary bundled PhylogenyIO module has its own separate manual.
+    checkdocs = :none,
 )
 
 deploydocs(repo = "github.com/EvoArt/PlotPhyloTree.jl.git", devbranch = "main")
