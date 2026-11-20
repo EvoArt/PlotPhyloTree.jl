@@ -151,6 +151,9 @@ end
 treeplot(s::AbstractString; kwargs...) = treeplot(_loadtree(s); kwargs...)
 
 function _loadtree(s::AbstractString)
+    # Newick text starts with '('; check that first, since isfile throws
+    # (ENAMETOOLONG) on a long Newick string rather than returning false.
+    startswith(lstrip(s), "(") && return parsenewick(s)
     if isfile(s)
         head = lowercase(first(read(s, String), 200))
         return occursin("#nexus", head) ? readnexus(s) : readnewick(s)

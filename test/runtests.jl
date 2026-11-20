@@ -385,3 +385,9 @@ end
         end
     end
 end
+
+@testset "long Newick text is not mistaken for a path" begin
+    tips = join(("t$i:0.1" for i in 1:400), ",")
+    p = treeplot("(" * tips * ");")
+    @test ntips(p.tree) == 400
+end
