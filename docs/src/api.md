@@ -2,8 +2,7 @@
 
 Tree reading, writing and manipulation (`readnewick`, `readnexus`, `mrca`,
 `ladderize!`, `tips`, …) come from
-the bundled [PhylogenyIO.jl](https://github.com/EvoArt/PhylogenyIO.jl) source
-and are re-exported.
+[PhylogenyIO.jl](https://github.com/EvoArt/PhylogenyIO.jl) and are re-exported.
 
 ```@docs
 PlotPhyloTree

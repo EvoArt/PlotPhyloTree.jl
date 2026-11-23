@@ -1,10 +1,11 @@
 name = "PlotPhyloTree"
 uuid = "13412a18-f2a1-4ce8-a2da-bce8c134a8fd"
 authors = ["Arthur Newbury <arn203@exeter.ac.uk>"]
-version = "0.1.1"
+version = "0.1.2"
 
 [deps]
 Base64 = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
+PhylogenyIO = "2031dd8a-3ee5-4b40-a1c7-31da38b3f347"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 
 [weakdeps]
@@ -17,6 +18,7 @@ PlotPhyloTreeMakieExt = "Makie"
 
 [compat]
 Base64 = "1"
+PhylogenyIO = "0.1.1"
 Random = "1"
 Test = "1"
 Librsvg_jll = "2.54"
