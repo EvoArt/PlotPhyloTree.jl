@@ -3,6 +3,7 @@
 [![Docs](https://img.shields.io/badge/docs-stable-blue.svg)](https://evoart.github.io/PlotPhyloTree.jl/stable/)
 [![Docs](https://img.shields.io/badge/docs-dev-blue.svg)](https://evoart.github.io/PlotPhyloTree.jl/dev/)
 [![CI](https://github.com/EvoArt/PlotPhyloTree.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/EvoArt/PlotPhyloTree.jl/actions/workflows/CI.yml)
+[![Coverage](https://codecov.io/gh/EvoArt/PlotPhyloTree.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/EvoArt/PlotPhyloTree.jl)
 
 Phylogenetic tree figures in pure Julia. Rectangular, circular and fan layouts;
 clade highlights and labels, support values, node pies, age bars, time scales,
